@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if entregador %}Editar Entregador{% else %}Novo Entregador{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if entregador %}Editar Entregador{% else %}Novo Entregador{% endif %}</h1>
+        <p>Cadastro dos entregadores</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if entregador and entregador.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Nome *</label>
+            <input type="text" name="nome" value="{{ entregador.nome if entregador else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Telefone</label>
+            <input type="text" name="telefone" value="{{ entregador.telefone if entregador else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>CPF</label>
+            <input type="text" name="cpf" value="{{ entregador.cpf if entregador else '' }}">
+        </div>
+
+        <div class="form-group full">
+            <label>Observação</label>
+            <textarea name="observacao" rows="4">{{ entregador.observacao if entregador else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select name="ativo">
+                <option value="1" {% if not entregador or entregador.ativo %}selected{% endif %}>Ativo</option>
+                <option value="0" {% if entregador and not entregador.ativo %}selected{% endif %}>Inativo</option>
+            </select>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if entregador %}Salvar Alterações{% else %}Salvar Entregador{% endif %}
+            </button>
+            <a href="{{ url_for('entregadores.listar_entregadores') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

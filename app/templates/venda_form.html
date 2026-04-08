@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if venda %}Editar Venda{% else %}Nova Venda{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if venda %}Editar Venda{% else %}Nova Venda{% endif %}</h1>
+        <p>Lançamento das vendas por forma de pagamento</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if venda and venda.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Data da Venda *</label>
+            <input type="date" name="data_venda" value="{{ venda.data_venda.strftime('%Y-%m-%d') if venda and venda.data_venda else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>À Vista</label>
+            <input type="text" name="valor_vista" value="{{ venda.valor_vista if venda else '0' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Cartão Vulcabras</label>
+            <input type="text" name="valor_vulcabras" value="{{ venda.valor_vulcabras if venda else '0' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Débito</label>
+            <input type="text" name="valor_debito" value="{{ venda.valor_debito if venda else '0' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Crédito</label>
+            <input type="text" name="valor_credito" value="{{ venda.valor_credito if venda else '0' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Pix</label>
+            <input type="text" name="valor_pix" value="{{ venda.valor_pix if venda else '0' }}">
+        </div>
+
+        <div class="form-group full">
+            <label>Observação</label>
+            <textarea name="observacao" rows="4">{{ venda.observacao if venda else '' }}</textarea>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if venda %}Salvar Alterações{% else %}Salvar Venda{% endif %}
+            </button>
+            <a href="{{ url_for('vendas.listar_vendas') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

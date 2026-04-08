@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Despesas Fixas | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Despesas Fixas</h1>
+        <p>Cadastre despesas recorrentes mensais</p>
+    </div>
+
+    <a href="{{ url_for('despesas_fixas.nova_despesa_fixa') }}" class="btn btn-primary">+ Nova Despesa Fixa</a>
+</div>
+
+<div class="filter-card">
+    <form method="GET" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('despesas_fixas.listar_despesas_fixas') }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Farmácia</th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Valor Padrão</th>
+                <th>Dia Vencimento</th>
+                <th>Tipo</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in despesas_fixas %}
+            <tr>
+                <td>{{ item.farmacia.nome_fantasia }}</td>
+                <td>{{ item.nome }}</td>
+                <td>{{ item.categoria }}</td>
+                <td>R$ {{ "%.2f"|format(item.valor_padrao) }}</td>
+                <td>{{ item.dia_vencimento }}</td>
+                <td>
+                    {% if item.tipo_valor == 'fixa' %}
+                        <span class="badge info">Valor Fixo</span>
+                    {% else %}
+                        <span class="badge warning">Valor Variável</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.ativa %}
+                        <span class="badge success">Ativa</span>
+                    {% else %}
+                        <span class="badge danger">Inativa</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-row">
+                        <a href="{{ url_for('despesas_fixas.editar_despesa_fixa', despesa_fixa_id=item.id) }}" class="btn btn-small btn-secondary">Editar</a>
+                        <form method="POST" action="{{ url_for('despesas_fixas.excluir_despesa_fixa', despesa_fixa_id=item.id) }}" onsubmit="return confirm('Deseja excluir esta despesa fixa?');">
+                            <button type="submit" class="btn btn-small btn-danger">Excluir</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">Nenhuma despesa fixa cadastrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

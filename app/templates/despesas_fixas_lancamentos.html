@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Lançamentos de Despesas Fixas | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Lançamentos de Despesas Fixas</h1>
+        <p>Geração e controle mensal das despesas fixas</p>
+    </div>
+</div>
+
+<div class="filter-card">
+    <form method="GET" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Ano</label>
+            <input type="number" name="ano" value="{{ filtro_ano }}">
+        </div>
+
+        <div class="form-group">
+            <label>Mês</label>
+            <input type="number" name="mes" min="1" max="12" value="{{ filtro_mes }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </div>
+    </form>
+</div>
+
+<div class="filter-card">
+    <form method="POST" action="{{ url_for('despesas_fixas.gerar_mes') }}" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Ano *</label>
+            <input type="number" name="ano" value="{{ filtro_ano }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Mês *</label>
+            <input type="number" name="mes" min="1" max="12" value="{{ filtro_mes }}" required>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">Gerar Despesas do Mês</button>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Farmácia</th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Centro de Custo</th>
+                <th>Vencimento</th>
+                <th>Valor</th>
+                <th>Pagamento</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in lancamentos %}
+            <tr>
+                <td>{{ item.farmacia.nome_fantasia }}</td>
+                <td>{{ item.nome }}</td>
+                <td>{{ item.categoria }}</td>
+                <td>{{ item.centro_custo or '-' }}</td>
+                <td>{{ item.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                <td>R$ {{ "%.2f"|format(item.valor) }}</td>
+                <td>
+                    {% if item.data_pagamento %}
+                        {{ item.data_pagamento.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.status == 'pago' %}
+                        <span class="badge success">Pago</span>
+                    {% elif item.status == 'vencido' %}
+                        <span class="badge danger">Vencido</span>
+                    {% else %}
+                        <span class="badge warning">Pendente</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.status != 'pago' %}
+                    <form method="POST" action="{{ url_for('despesas_fixas.pagar_lancamento', lancamento_id=item.id) }}" class="pay-form">
+                        <input type="date" name="data_pagamento" required>
+                        <input type="text" name="valor" placeholder="Valor pago">
+                        <button type="submit" class="btn btn-small btn-success">Pagar</button>
+                    </form>
+                    {% else %}
+                    <span class="badge success">Quitado</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9">Nenhum lançamento encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

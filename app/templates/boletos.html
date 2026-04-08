@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Boletos | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Boletos</h1>
+        <p>Controle de contas a pagar, vencidas e pagas</p>
+    </div>
+
+    <a href="{{ url_for('boletos.novo_boleto') }}" class="btn btn-primary">+ Novo Boleto</a>
+</div>
+
+<div class="filter-card">
+    <form method="GET" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+                <option value="">Todos</option>
+                <option value="a_vencer" {% if filtro_status == 'a_vencer' %}selected{% endif %}>A Vencer</option>
+                <option value="vencido" {% if filtro_status == 'vencido' %}selected{% endif %}>Vencido</option>
+                <option value="pago" {% if filtro_status == 'pago' %}selected{% endif %}>Pago</option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('boletos.listar_boletos') }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Farmácia</th>
+                <th>Empresa</th>
+                <th>Vencimento</th>
+                <th>Pagamento</th>
+                <th>Valor Original</th>
+                <th>Juros</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for boleto in boletos %}
+            <tr>
+                <td>{{ boleto.farmacia.nome_fantasia }}</td>
+                <td>{{ boleto.empresa_nome }}</td>
+                <td>{{ boleto.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    {% if boleto.data_pagamento %}
+                        {{ boleto.data_pagamento.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>R$ {{ "%.2f"|format(boleto.valor_original) }}</td>
+                <td>R$ {{ "%.2f"|format(boleto.juros or 0) }}</td>
+                <td>R$ {{ "%.2f"|format(boleto.valor_total or boleto.valor_original) }}</td>
+                <td>
+                    {% if boleto.status == 'pago' %}
+                        <span class="badge success">Pago</span>
+                    {% elif boleto.status == 'vencido' %}
+                        <span class="badge danger">Vencido</span>
+                    {% else %}
+                        {% set dias = (boleto.data_vencimento - hoje).days if hoje else 999 %}
+                        {% if dias >= 0 and dias <= 2 %}
+                            <span class="badge warning">Vence em breve</span>
+                        {% else %}
+                            <span class="badge warning">A Vencer</span>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-column">
+                        <a href="{{ url_for('boletos.editar_boleto', boleto_id=boleto.id) }}" class="btn btn-small btn-secondary">Editar</a>
+
+                        {% if boleto.status != 'pago' %}
+                        <form method="POST" action="{{ url_for('boletos.pagar_boleto', boleto_id=boleto.id) }}" class="pay-form">
+                            <input type="date" name="data_pagamento" required>
+                            <input type="text" name="valor_pago" placeholder="Valor pago">
+                            <button type="submit" class="btn btn-small btn-success">Pagar</button>
+                        </form>
+                        {% endif %}
+
+                        <form method="POST" action="{{ url_for('boletos.excluir_boleto', boleto_id=boleto.id) }}" onsubmit="return confirm('Deseja excluir este boleto?');">
+                            <button type="submit" class="btn btn-small btn-danger">Excluir</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9">Nenhum boleto cadastrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

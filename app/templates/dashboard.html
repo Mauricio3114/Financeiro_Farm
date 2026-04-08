@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-top">
+    <div>
+        <h1 class="page-title">Dashboard Financeiro Premium</h1>
+        <p class="page-subtitle">Resumo geral do sistema em {{ hoje.strftime('%d/%m/%Y') }}</p>
+    </div>
+</div>
+
+<div class="filter-card premium-filter">
+    <form method="GET" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Data Inicial</label>
+            <input type="date" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+
+        <div class="form-group">
+            <label>Data Final</label>
+            <input type="date" name="data_fim" value="{{ data_fim }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('dashboard.dashboard') }}" class="btn btn-secondary">Limpar</a>
+            <a href="{{ url_for('relatorios.relatorio_financeiro_pdf', farmacia_id=filtro_farmacia_id, data_inicio=data_inicio, data_fim=data_fim) }}" class="btn btn-danger">PDF</a>
+            <a href="{{ url_for('relatorios.relatorio_financeiro_excel', farmacia_id=filtro_farmacia_id, data_inicio=data_inicio, data_fim=data_fim) }}" class="btn btn-success">Excel</a>
+        </div>
+    </form>
+</div>
+
+{% if boletos_proximos %}
+<div class="alert-card premium-alert">
+    <h3>Boletos próximos do vencimento</h3>
+    <div class="alert-list">
+        {% for boleto, dias in boletos_proximos %}
+        <div class="alert-item">
+            <strong>{{ boleto.empresa_nome }}</strong> — {{ boleto.farmacia.nome_fantasia }} —
+            vence em
+            {% if dias == 0 %}
+                <span class="badge danger">hoje</span>
+            {% elif dias == 1 %}
+                <span class="badge warning">1 dia</span>
+            {% else %}
+                <span class="badge warning">{{ dias }} dias</span>
+            {% endif %}
+            — vencimento: {{ boleto.data_vencimento.strftime('%d/%m/%Y') }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="premium-section">
+    <h2 class="section-title">Indicadores Principais</h2>
+    <div class="cards-grid">
+        <div class="card premium-card">
+            <span class="card-label">Receita Bruta</span>
+            <h2>R$ {{ "%.2f"|format(receita_bruta) }}</h2>
+        </div>
+
+        <div class="card premium-card">
+            <span class="card-label">Despesas Operacionais</span>
+            <h2>R$ {{ "%.2f"|format(despesas_operacionais) }}</h2>
+        </div>
+
+        <div class="card card-result {% if lucro_liquido >= 0 %}positive{% else %}negative{% endif %}">
+            <span class="card-label">Lucro Líquido</span>
+            <h2>R$ {{ "%.2f"|format(lucro_liquido) }}</h2>
+        </div>
+
+        <div class="card premium-card blue">
+            <span class="card-label">Margem de Lucro</span>
+            <h2>{{ "%.2f"|format(margem_lucro) }}%</h2>
+        </div>
+
+        <div class="card premium-card purple">
+            <span class="card-label">Previsão Receita</span>
+            <h2>R$ {{ "%.2f"|format(previsao_receita) }}</h2>
+        </div>
+
+        <div class="card premium-card green">
+            <span class="card-label">Previsão Lucro</span>
+            <h2>R$ {{ "%.2f"|format(previsao_lucro) }}</h2>
+        </div>
+    </div>
+</div>
+
+<div class="premium-section">
+    <h2 class="section-title">Financeiro Geral</h2>
+    <div class="cards-grid">
+        <div class="card"><span class="card-label">Farmácias</span><h2>{{ total_farmacias }}</h2></div>
+        <div class="card"><span class="card-label">Boletos</span><h2>{{ total_boletos }}</h2></div>
+        <div class="card"><span class="card-label">Pagos</span><h2>{{ total_pagos }}</h2></div>
+        <div class="card"><span class="card-label">Vencidos</span><h2>{{ total_vencidos }}</h2></div>
+        <div class="card"><span class="card-label">Total Pago</span><h2>R$ {{ "%.2f"|format(soma_pagos) }}</h2></div>
+        <div class="card"><span class="card-label">A Pagar</span><h2>R$ {{ "%.2f"|format(soma_a_pagar) }}</h2></div>
+        <div class="card"><span class="card-label">A Receber</span><h2>R$ {{ "%.2f"|format(total_receber) }}</h2></div>
+        <div class="card"><span class="card-label">Recebido</span><h2>R$ {{ "%.2f"|format(total_recebido) }}</h2></div>
+        <div class="card"><span class="card-label">Entradas Caixa</span><h2>R$ {{ "%.2f"|format(total_entradas_caixa) }}</h2></div>
+        <div class="card"><span class="card-label">Saídas Caixa</span><h2>R$ {{ "%.2f"|format(total_saidas_caixa) }}</h2></div>
+        <div class="card"><span class="card-label">Saldo Caixa</span><h2>R$ {{ "%.2f"|format(saldo_caixa) }}</h2></div>
+        <div class="card"><span class="card-label">Despesas Gerais</span><h2>R$ {{ "%.2f"|format(total_despesas) }}</h2></div>
+        <div class="card"><span class="card-label">Despesas Motos</span><h2>R$ {{ "%.2f"|format(total_despesas_motos) }}</h2></div>
+        <div class="card"><span class="card-label">Despesas Fixas</span><h2>R$ {{ "%.2f"|format(total_despesas_fixas) }}</h2></div>
+        <div class="card"><span class="card-label">Despesas Totais</span><h2>R$ {{ "%.2f"|format(total_despesas_geral) }}</h2></div>
+        <div class="card"><span class="card-label">Vendas</span><h2>R$ {{ "%.2f"|format(total_vendas) }}</h2></div>
+        <div class="card"><span class="card-label">Entregadores</span><h2>{{ total_entregadores }}</h2></div>
+        <div class="card"><span class="card-label">Motos</span><h2>{{ total_motos }}</h2></div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="table-card chart-card">
+        <h3>DRE Visual</h3>
+        <canvas id="graficoFinanceiro"></canvas>
+    </div>
+
+    <div class="table-card chart-card">
+        <h3>Formas de Pagamento</h3>
+        <canvas id="graficoPagamentos"></canvas>
+    </div>
+
+    <div class="table-card">
+        <h3>Comparativo Mensal</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Indicador</th>
+                    <th>Mês Atual</th>
+                    <th>Mês Anterior</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Vendas</td>
+                    <td>R$ {{ "%.2f"|format(vendas_mes_atual) }}</td>
+                    <td>R$ {{ "%.2f"|format(vendas_mes_anterior) }}</td>
+                </tr>
+                <tr>
+                    <td>Despesas</td>
+                    <td>R$ {{ "%.2f"|format(despesas_mes_atual) }}</td>
+                    <td>R$ {{ "%.2f"|format(despesas_mes_anterior) }}</td>
+                </tr>
+                <tr>
+                    <td>Lucro</td>
+                    <td>R$ {{ "%.2f"|format(lucro_mes_atual) }}</td>
+                    <td>R$ {{ "%.2f"|format(lucro_mes_anterior) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h3>Top Categorias de Despesas</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Categoria</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for categoria, total in top_categorias %}
+                <tr>
+                    <td>{{ categoria }}</td>
+                    <td>R$ {{ "%.2f"|format(total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2">Sem dados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h3>Top Gastos por Centro de Custo</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Centro</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for nome, total in top_centros %}
+                <tr>
+                    <td>{{ nome or "Não definido" }}</td>
+                    <td>R$ {{ "%.2f"|format(total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2">Sem dados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h3>Top Gastos por Moto</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Moto</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for modelo, placa, total in top_motos %}
+                <tr>
+                    <td>{{ modelo }} {% if placa %}- {{ placa }}{% endif %}</td>
+                    <td>R$ {{ "%.2f"|format(total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2">Sem dados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h3>Top Gastos por Entregador</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Entregador</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for nome, total in top_entregadores %}
+                <tr>
+                    <td>{{ nome }}</td>
+                    <td>R$ {{ "%.2f"|format(total) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2">Sem dados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card full-width">
+        <h3>Alertas de Revisão</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Farmácia</th>
+                    <th>Moto</th>
+                    <th>KM Atual</th>
+                    <th>KM Última Revisão</th>
+                    <th>KM Desde Revisão</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for moto in motos_revisao %}
+                <tr>
+                    <td>{{ moto.farmacia.nome_fantasia }}</td>
+                    <td>{{ moto.identificacao() }}</td>
+                    <td>{{ moto.km_atual or '-' }}</td>
+                    <td>{{ moto.km_ultima_revisao or '-' }}</td>
+                    <td>{{ moto.km_desde_revisao() or '-' }}</td>
+                    <td><span class="badge danger">Revisão Pendente</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">Nenhuma moto com alerta de revisão.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const ctx = document.getElementById('graficoFinanceiro');
+if (ctx) {
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Receita Bruta', 'Desp. Gerais', 'Desp. Motos', 'Desp. Fixas', 'Lucro Líquido'],
+            datasets: [{
+                label: 'Valores',
+                data: [
+                    {{ receita_bruta|round(2) }},
+                    {{ total_despesas|round(2) }},
+                    {{ total_despesas_motos|round(2) }},
+                    {{ total_despesas_fixas|round(2) }},
+                    {{ lucro_liquido|round(2) }}
+                ],
+                backgroundColor: ['#2563eb', '#f59e0b', '#ef4444', '#8b5cf6', '#16a34a'],
+                borderRadius: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+const ctxPag = document.getElementById('graficoPagamentos');
+if (ctxPag) {
+    new Chart(ctxPag, {
+        type: 'doughnut',
+        data: {
+            labels: ['À Vista', 'Vulcabras', 'Débito', 'Crédito', 'Pix'],
+            datasets: [{
+                data: [
+                    {{ resumo_pagamentos.vista|round(2) }},
+                    {{ resumo_pagamentos.vulcabras|round(2) }},
+                    {{ resumo_pagamentos.debito|round(2) }},
+                    {{ resumo_pagamentos.credito|round(2) }},
+                    {{ resumo_pagamentos.pix|round(2) }}
+                ],
+                backgroundColor: ['#2563eb', '#7c3aed', '#f59e0b', '#ef4444', '#16a34a']
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+}
+</script>
+{% endblock %}

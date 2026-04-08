@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Farmácias | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Farmácias</h1>
+        <p>Cadastro e visualização das farmácias</p>
+    </div>
+
+    {% if current_user.perfil == 'admin' %}
+    <a href="{{ url_for('farmacias.nova_farmacia') }}" class="btn btn-primary">+ Nova Farmácia</a>
+    {% endif %}
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Nome Fantasia</th>
+                <th>Responsável</th>
+                <th>Telefone</th>
+                <th>E-mail</th>
+                <th>Status</th>
+                {% if current_user.perfil == 'admin' %}
+                <th>Ações</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for farmacia in farmacias %}
+            <tr>
+                <td>{{ farmacia.nome_fantasia }}</td>
+                <td>{{ farmacia.responsavel or '-' }}</td>
+                <td>{{ farmacia.telefone or '-' }}</td>
+                <td>{{ farmacia.email or '-' }}</td>
+                <td>
+                    {% if farmacia.ativo %}
+                        <span class="badge success">Ativa</span>
+                    {% else %}
+                        <span class="badge danger">Inativa</span>
+                    {% endif %}
+                </td>
+                {% if current_user.perfil == 'admin' %}
+                <td>
+                    <a href="{{ url_for('farmacias.editar_farmacia', farmacia_id=farmacia.id) }}" class="btn btn-small btn-secondary">Editar</a>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6">Nenhuma farmácia cadastrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

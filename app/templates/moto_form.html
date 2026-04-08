@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if moto %}Editar Moto{% else %}Nova Moto{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if moto %}Editar Moto{% else %}Nova Moto{% endif %}</h1>
+        <p>Cadastro das motos</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if moto and moto.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Entregador</label>
+            <select name="entregador_id">
+                <option value="">Selecione</option>
+                {% for entregador in entregadores %}
+                    <option value="{{ entregador.id }}" {% if moto and moto.entregador_id == entregador.id %}selected{% endif %}>
+                        {{ entregador.nome }} - {{ entregador.farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Modelo *</label>
+            <input type="text" name="modelo" value="{{ moto.modelo if moto else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Placa</label>
+            <input type="text" name="placa" value="{{ moto.placa if moto else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Ano</label>
+            <input type="text" name="ano" value="{{ moto.ano if moto else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Cor</label>
+            <input type="text" name="cor" value="{{ moto.cor if moto else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>KM Atual</label>
+            <input type="number" name="km_atual" value="{{ moto.km_atual if moto and moto.km_atual is not none else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>KM Última Revisão</label>
+            <input type="number" name="km_ultima_revisao" value="{{ moto.km_ultima_revisao if moto and moto.km_ultima_revisao is not none else '' }}">
+        </div>
+
+        <div class="form-group full">
+            <label>Observação</label>
+            <textarea name="observacao" rows="4">{{ moto.observacao if moto else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select name="ativa">
+                <option value="1" {% if not moto or moto.ativa %}selected{% endif %}>Ativa</option>
+                <option value="0" {% if moto and not moto.ativa %}selected{% endif %}>Inativa</option>
+            </select>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if moto %}Salvar Alterações{% else %}Salvar Moto{% endif %}
+            </button>
+            <a href="{{ url_for('motos.listar_motos') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

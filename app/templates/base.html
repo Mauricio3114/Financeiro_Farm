@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Financeiro Farm{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="layout">
+        {% if current_user.is_authenticated %}
+        <aside class="sidebar">
+            <div class="brand">
+                <h2>Financeiro Farm</h2>
+                <p>{{ current_user.nome }}</p>
+            </div>
+
+            <nav class="menu">
+                <a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('farmacias.listar_farmacias') }}">Farmácias</a>
+                {% if current_user.perfil == 'admin' %}
+                <a href="{{ url_for('usuarios.listar_usuarios') }}">Usuários</a>
+                {% endif %}
+                <a href="{{ url_for('boletos.listar_boletos') }}">Boletos</a>
+                <a href="{{ url_for('contas_receber.listar_contas_receber') }}">Contas a Receber</a>
+                <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
+                <a href="{{ url_for('despesas_fixas.listar_despesas_fixas') }}">Despesas Fixas</a>
+                <a href="{{ url_for('despesas_fixas.listar_lancamentos') }}">Lançamentos Fixos</a>
+                <a href="{{ url_for('vendas.listar_vendas') }}">Vendas do Dia</a>
+                <a href="{{ url_for('caixa.listar_caixa') }}">Fluxo de Caixa</a>
+                <a href="{{ url_for('entregadores.listar_entregadores') }}">Entregadores</a>
+                <a href="{{ url_for('motos.listar_motos') }}">Motos</a>
+                <a href="{{ url_for('despesas_motos.listar_despesas_motos') }}">Despesas das Motos</a>
+                <a href="{{ url_for('auth.logout') }}">Sair</a>
+            </nav>
+        </aside>
+        {% endif %}
+
+        <main class="content {% if not current_user.is_authenticated %}content-full{% endif %}">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-area">
+                        {% for category, message in messages %}
+                            <div class="flash {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

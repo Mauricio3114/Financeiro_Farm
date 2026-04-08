@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if conta %}Editar Conta a Receber{% else %}Nova Conta a Receber{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if conta %}Editar Conta a Receber{% else %}Nova Conta a Receber{% endif %}</h1>
+        <p>Cadastro de recebimentos futuros</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if conta and conta.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Cliente *</label>
+            <input type="text" name="cliente_nome" value="{{ conta.cliente_nome if conta else '' }}" required>
+        </div>
+
+        <div class="form-group full">
+            <label>Descrição</label>
+            <input type="text" name="descricao" value="{{ conta.descricao if conta else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Valor *</label>
+            <input type="text" name="valor" value="{{ conta.valor if conta else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Data de Vencimento *</label>
+            <input type="date" name="data_vencimento" value="{{ conta.data_vencimento.strftime('%Y-%m-%d') if conta and conta.data_vencimento else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Data de Recebimento</label>
+            <input type="date" name="data_recebimento" value="{{ conta.data_recebimento.strftime('%Y-%m-%d') if conta and conta.data_recebimento else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Valor Recebido</label>
+            <input type="text" name="valor_recebido" value="{{ conta.valor_recebido if conta and conta.valor_recebido is not none else '' }}">
+        </div>
+
+        <div class="form-group full">
+            <label>Observação</label>
+            <textarea name="observacao" rows="4">{{ conta.observacao if conta else '' }}</textarea>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if conta %}Salvar Alterações{% else %}Salvar Conta{% endif %}
+            </button>
+            <a href="{{ url_for('contas_receber.listar_contas_receber') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

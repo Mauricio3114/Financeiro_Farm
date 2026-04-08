@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if farmacia %}Editar Farmácia{% else %}Nova Farmácia{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if farmacia %}Editar Farmácia{% else %}Nova Farmácia{% endif %}</h1>
+        <p>Cadastre a farmácia e vincule aos usuários</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Nome Fantasia *</label>
+            <input type="text" name="nome_fantasia" value="{{ farmacia.nome_fantasia if farmacia else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Razão Social</label>
+            <input type="text" name="razao_social" value="{{ farmacia.razao_social if farmacia else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>CNPJ</label>
+            <input type="text" name="cnpj" value="{{ farmacia.cnpj if farmacia else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Telefone</label>
+            <input type="text" name="telefone" value="{{ farmacia.telefone if farmacia else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" name="email" value="{{ farmacia.email if farmacia else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Responsável</label>
+            <input type="text" name="responsavel" value="{{ farmacia.responsavel if farmacia else '' }}">
+        </div>
+
+        <div class="form-group full">
+            <label>Endereço</label>
+            <input type="text" name="endereco" value="{{ farmacia.endereco if farmacia else '' }}">
+        </div>
+
+        <div class="form-group full">
+            <label>Vincular usuários</label>
+            <select name="usuarios" multiple class="multi-select">
+                {% for usuario in usuarios %}
+                    <option value="{{ usuario.id }}" {% if usuario.id in vinculados %}selected{% endif %}>
+                        {{ usuario.nome }} - {{ usuario.email }}
+                    </option>
+                {% endfor %}
+            </select>
+            <small>Segure CTRL para selecionar mais de um.</small>
+        </div>
+
+        {% if farmacia %}
+        <div class="form-group">
+            <label>Status</label>
+            <select name="ativo">
+                <option value="1" {% if farmacia.ativo %}selected{% endif %}>Ativa</option>
+                <option value="0" {% if not farmacia.ativo %}selected{% endif %}>Inativa</option>
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if farmacia %}Salvar Alterações{% else %}Salvar Farmácia{% endif %}
+            </button>
+            <a href="{{ url_for('farmacias.listar_farmacias') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

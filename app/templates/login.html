@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Login | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+    <div class="login-card">
+        <h1>Financeiro Farm</h1>
+        <p>Controle financeiro de uma ou várias farmácias</p>
+
+        <form method="POST" class="form-grid">
+            <div class="form-group">
+                <label>E-mail</label>
+                <input type="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label>Senha</label>
+                <input type="password" name="senha" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Entrar</button>
+        </form>
+
+        <div class="login-info">
+            <strong>Primeiro acesso:</strong><br>
+            Acesse: <b>admin@financeirofarm.com</b><br>
+            Senha: <b>123456</b><br>
+            Antes, abra: <b>/criar-admin</b>
+        </div>
+    </div>
+</div>
+{% endblock %}

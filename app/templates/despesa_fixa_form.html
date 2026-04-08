@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if despesa_fixa %}Editar Despesa Fixa{% else %}Nova Despesa Fixa{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if despesa_fixa %}Editar Despesa Fixa{% else %}Nova Despesa Fixa{% endif %}</h1>
+        <p>Cadastro de despesas recorrentes</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if despesa_fixa and despesa_fixa.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Nome *</label>
+            <input type="text" name="nome" value="{{ despesa_fixa.nome if despesa_fixa else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Categoria *</label>
+            <input type="text" name="categoria" value="{{ despesa_fixa.categoria if despesa_fixa else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Centro de Custo</label>
+            <select name="centro_custo">
+                {% set cc = despesa_fixa.centro_custo if despesa_fixa else '' %}
+                <option value="">Selecione</option>
+                <option value="Administrativo" {% if cc == 'Administrativo' %}selected{% endif %}>Administrativo</option>
+                <option value="Entregas" {% if cc == 'Entregas' %}selected{% endif %}>Entregas</option>
+                <option value="Loja" {% if cc == 'Loja' %}selected{% endif %}>Loja</option>
+                <option value="RH" {% if cc == 'RH' %}selected{% endif %}>RH</option>
+                <option value="Marketing" {% if cc == 'Marketing' %}selected{% endif %}>Marketing</option>
+                <option value="Manutenção" {% if cc == 'Manutenção' %}selected{% endif %}>Manutenção</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Valor Padrão *</label>
+            <input type="text" name="valor_padrao" value="{{ despesa_fixa.valor_padrao if despesa_fixa else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Dia do Vencimento *</label>
+            <input type="number" name="dia_vencimento" min="1" max="31" value="{{ despesa_fixa.dia_vencimento if despesa_fixa else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Tipo do Valor *</label>
+            <select name="tipo_valor" required>
+                <option value="">Selecione</option>
+                <option value="fixa" {% if despesa_fixa and despesa_fixa.tipo_valor == 'fixa' %}selected{% endif %}>Fixa</option>
+                <option value="variavel" {% if despesa_fixa and despesa_fixa.tipo_valor == 'variavel' %}selected{% endif %}>Variável</option>
+            </select>
+        </div>
+
+        <div class="form-group full">
+            <label>Observação</label>
+            <textarea name="observacao" rows="4">{{ despesa_fixa.observacao if despesa_fixa else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select name="ativa">
+                <option value="1" {% if not despesa_fixa or despesa_fixa.ativa %}selected{% endif %}>Ativa</option>
+                <option value="0" {% if despesa_fixa and not despesa_fixa.ativa %}selected{% endif %}>Inativa</option>
+            </select>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if despesa_fixa %}Salvar Alterações{% else %}Salvar Despesa Fixa{% endif %}
+            </button>
+            <a href="{{ url_for('despesas_fixas.listar_despesas_fixas') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

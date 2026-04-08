@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Fluxo de Caixa | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Fluxo de Caixa</h1>
+        <p>Entradas, saídas e saldo por período</p>
+    </div>
+
+    <a href="{{ url_for('caixa.novo_movimento') }}" class="btn btn-primary">+ Novo Movimento</a>
+</div>
+
+<div class="filter-card">
+    <form method="GET" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Data Inicial</label>
+            <input type="date" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+
+        <div class="form-group">
+            <label>Data Final</label>
+            <input type="date" name="data_fim" value="{{ data_fim }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('caixa.listar_caixa') }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="cards-grid">
+    <div class="card">
+        <span class="card-label">Entradas</span>
+        <h2>R$ {{ "%.2f"|format(entradas) }}</h2>
+    </div>
+    <div class="card">
+        <span class="card-label">Saídas</span>
+        <h2>R$ {{ "%.2f"|format(saidas) }}</h2>
+    </div>
+    <div class="card card-result {% if saldo >= 0 %}positive{% else %}negative{% endif %}">
+        <span class="card-label">Saldo</span>
+        <h2>R$ {{ "%.2f"|format(saldo) }}</h2>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="table-card">
+        <h3>Movimentos</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Farmácia</th>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Origem</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for movimento in movimentos %}
+                <tr>
+                    <td>{{ movimento.farmacia.nome_fantasia }}</td>
+                    <td>{{ movimento.data_movimento.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        {% if movimento.tipo == 'entrada' %}
+                            <span class="badge success">Entrada</span>
+                        {% else %}
+                            <span class="badge danger">Saída</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ movimento.categoria }}</td>
+                    <td>{{ movimento.descricao }}</td>
+                    <td>{{ movimento.origem or '-' }}</td>
+                    <td>R$ {{ "%.2f"|format(movimento.valor) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">Nenhum movimento encontrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-card">
+        <h3>Fechamento Mensal</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mês</th>
+                    <th>Tipo</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mes, tipo, total in resumo_mensal %}
+                <tr>
+                    <td>{{ mes }}</td>
+                    <td>
+                        {% if tipo == 'entrada' %}
+                            <span class="badge success">Entrada</span>
+                        {% else %}
+                            <span class="badge danger">Saída</span>
+                        {% endif %}
+                    </td>
+                    <td>R$ {{ "%.2f"|format(total) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3">Sem dados mensais.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if usuario %}Editar Usuário{% else %}Novo Usuário{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if usuario %}Editar Usuário{% else %}Novo Usuário{% endif %}</h1>
+        <p>Cadastre usuários e vincule às farmácias</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Nome *</label>
+            <input type="text" name="nome" value="{{ usuario.nome if usuario else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>E-mail *</label>
+            <input type="email" name="email" value="{{ usuario.email if usuario else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Senha {% if not usuario %}*{% endif %}</label>
+            <input type="password" name="senha" {% if not usuario %}required{% endif %}>
+            {% if usuario %}
+            <small>Deixe em branco para manter a senha atual.</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label>Perfil</label>
+            <select name="perfil">
+                <option value="financeiro" {% if usuario and usuario.perfil == 'financeiro' %}selected{% endif %}>Financeiro</option>
+                <option value="admin" {% if usuario and usuario.perfil == 'admin' %}selected{% endif %}>Admin</option>
+            </select>
+        </div>
+
+        <div class="form-group full">
+            <label>Farmácias vinculadas</label>
+            <select name="farmacias" multiple class="multi-select">
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if farmacia.id in vinculados %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+            <small>Segure CTRL para selecionar mais de uma.</small>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select name="ativo">
+                <option value="1" {% if not usuario or usuario.ativo %}selected{% endif %}>Ativo</option>
+                <option value="0" {% if usuario and not usuario.ativo %}selected{% endif %}>Inativo</option>
+            </select>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if usuario %}Salvar Alterações{% else %}Salvar Usuário{% endif %}
+            </button>
+            <a href="{{ url_for('usuarios.listar_usuarios') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

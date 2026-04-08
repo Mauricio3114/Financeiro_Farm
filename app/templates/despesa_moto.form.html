@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if despesa_moto %}Editar Despesa da Moto{% else %}Nova Despesa da Moto{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if despesa_moto %}Editar Despesa da Moto{% else %}Nova Despesa da Moto{% endif %}</h1>
+        <p>Lançamento das despesas de motos e entregadores</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if despesa_moto and despesa_moto.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Moto *</label>
+            <select name="moto_id" required>
+                <option value="">Selecione</option>
+                {% for moto in motos %}
+                    <option value="{{ moto.id }}" {% if despesa_moto and despesa_moto.moto_id == moto.id %}selected{% endif %}>
+                        {{ moto.identificacao() }} - {{ moto.farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Entregador</label>
+            <select name="entregador_id">
+                <option value="">Selecione</option>
+                {% for entregador in entregadores %}
+                    <option value="{{ entregador.id }}" {% if despesa_moto and despesa_moto.entregador_id == entregador.id %}selected{% endif %}>
+                        {{ entregador.nome }} - {{ entregador.farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Tipo da Despesa *</label>
+            <select name="tipo_despesa" required>
+                {% set tipo = despesa_moto.tipo_despesa if despesa_moto else '' %}
+                <option value="">Selecione</option>
+                <option value="gasolina" {% if tipo == 'gasolina' %}selected{% endif %}>Gasolina</option>
+                <option value="manutencao" {% if tipo == 'manutencao' %}selected{% endif %}>Manutenção</option>
+                <option value="troca_oleo" {% if tipo == 'troca_oleo' %}selected{% endif %}>Troca de Óleo</option>
+                <option value="pneu" {% if tipo == 'pneu' %}selected{% endif %}>Pneu</option>
+                <option value="peca" {% if tipo == 'peca' %}selected{% endif %}>Peça</option>
+                <option value="lavagem" {% if tipo == 'lavagem' %}selected{% endif %}>Lavagem</option>
+                <option value="documento" {% if tipo == 'documento' %}selected{% endif %}>Documento</option>
+                <option value="outros" {% if tipo == 'outros' %}selected{% endif %}>Outros</option>
+            </select>
+        </div>
+
+        <div class="form-group full">
+            <label>Descrição *</label>
+            <input type="text" name="descricao" value="{{ despesa_moto.descricao if despesa_moto else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Valor *</label>
+            <input type="text" name="valor" value="{{ despesa_moto.valor if despesa_moto else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Data da Despesa *</label>
+            <input type="date" name="data_despesa" value="{{ despesa_moto.data_despesa.strftime('%Y-%m-%d') if despesa_moto and despesa_moto.data_despesa else '' }}" required>
+        </div>
+
+        <div class="form-group full">
+            <label>Observação</label>
+            <textarea name="observacao" rows="4">{{ despesa_moto.observacao if despesa_moto else '' }}</textarea>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if despesa_moto %}Salvar Alterações{% else %}Salvar Despesa{% endif %}
+            </button>
+            <a href="{{ url_for('despesas_motos.listar_despesas_motos') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

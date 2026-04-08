@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Despesas das Motos | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Despesas das Motos</h1>
+        <p>Controle de gasolina, manutenção e custos das motos</p>
+    </div>
+
+    <a href="{{ url_for('despesas_motos.nova_despesa_moto') }}" class="btn btn-primary">+ Nova Despesa da Moto</a>
+</div>
+
+<div class="filter-card">
+    <form method="GET" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('despesas_motos.listar_despesas_motos') }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Farmácia</th>
+                <th>Moto</th>
+                <th>Entregador</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Data</th>
+                <th>Valor</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for despesa in despesas_motos %}
+            <tr>
+                <td>{{ despesa.farmacia.nome_fantasia }}</td>
+                <td>{{ despesa.moto.identificacao() }}</td>
+                <td>{{ despesa.entregador.nome if despesa.entregador else '-' }}</td>
+                <td>{{ despesa.tipo_despesa }}</td>
+                <td>{{ despesa.descricao }}</td>
+                <td>{{ despesa.data_despesa.strftime('%d/%m/%Y') }}</td>
+                <td>R$ {{ "%.2f"|format(despesa.valor) }}</td>
+                <td>
+                    <div class="actions-row">
+                        <a href="{{ url_for('despesas_motos.editar_despesa_moto', despesa_moto_id=despesa.id) }}" class="btn btn-small btn-secondary">Editar</a>
+                        <form method="POST" action="{{ url_for('despesas_motos.excluir_despesa_moto', despesa_moto_id=despesa.id) }}" onsubmit="return confirm('Deseja excluir esta despesa?');">
+                            <button type="submit" class="btn btn-small btn-danger">Excluir</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">Nenhuma despesa de moto cadastrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
