@@ -121,7 +121,8 @@ body {
 .form-card,
 .login-card,
 .filter-card,
-.alert-card {
+.alert-card,
+.agenda-alert-card {
     background: rgba(255, 255, 255, 0.92);
     border-radius: 22px;
     padding: 22px;
@@ -216,7 +217,8 @@ body {
     background: linear-gradient(180deg, #fff7ed, #fffbeb);
 }
 
-.alert-card h3 {
+.alert-card h3,
+.agenda-alert-card h3 {
     margin-top: 0;
     margin-bottom: 12px;
     font-size: 20px;
@@ -235,6 +237,88 @@ body {
     border-radius: 14px;
 }
 
+.agenda-alert-card {
+    margin-bottom: 22px;
+    border-left: 6px solid #ef4444;
+    background: linear-gradient(180deg, #fff1f2, #fff7ed);
+}
+
+.agenda-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.agenda-alert-header p {
+    margin: 6px 0 0;
+    color: #64748b;
+}
+
+.agenda-badge-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.agenda-badge {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.agenda-badge.info {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.agenda-badge.danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.agenda-dashboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.agenda-dashboard-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.82);
+    border-radius: 14px;
+    border: 1px solid #fecaca;
+}
+
+.agenda-dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.agenda-dashboard-main span {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.agenda-dashboard-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+}
+
 .table-card h3,
 .table-header h3 {
     margin-top: 0;
@@ -245,6 +329,12 @@ body {
 
 .chart-card {
     min-height: 360px;
+}
+
+.table-subtext {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748b;
 }
 
 table {
@@ -424,6 +514,41 @@ table th {
     color: #1d4ed8;
 }
 
+.pulse-badge {
+    animation: pulseGlow 1.2s infinite;
+}
+
+.pulse-box {
+    animation: pulseBox 1.4s infinite;
+}
+
+@keyframes pulseGlow {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+    }
+    70% {
+        transform: scale(1.04);
+        box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes pulseBox {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.25);
+    }
+    70% {
+        box-shadow: 0 0 0 14px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
 .flash-area {
     margin-bottom: 18px;
 }
@@ -519,6 +644,12 @@ canvas {
 
     .page-title {
         font-size: 30px;
+    }
+
+    .agenda-alert-header,
+    .agenda-dashboard-item {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     table {

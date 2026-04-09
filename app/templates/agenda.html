@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Agenda | Financeiro Farm{% endblock %}
+
+{% block content %}
+<div class="page-top">
+    <div>
+        <h1 class="page-title">Agenda e Lembretes</h1>
+        <p class="page-subtitle">Controle de datas importantes, aniversários e avisos</p>
+    </div>
+</div>
+
+<div class="filter-card premium-filter">
+    <form method="GET" class="filters-inline">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+                <option value="">Todos</option>
+                <option value="pendente" {% if filtro_status == 'pendente' %}selected{% endif %}>Pendente</option>
+                <option value="concluido" {% if filtro_status == 'concluido' %}selected{% endif %}>Concluído</option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('agenda.listar_agenda') }}" class="btn btn-secondary">Limpar</a>
+            <a href="{{ url_for('agenda.novo_evento') }}" class="btn btn-success">+ Novo Evento</a>
+        </div>
+    </form>
+</div>
+
+<div class="table-card">
+    <h3>Eventos da Agenda</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Farmácia</th>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Data</th>
+                <th>Hora</th>
+                <th>Prioridade</th>
+                <th>Repetição</th>
+                <th>Status</th>
+                <th>Alerta</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for evento in eventos %}
+            {% set alerta = evento.nivel_alerta() %}
+            <tr>
+                <td>{{ evento.farmacia.nome_fantasia }}</td>
+                <td>
+                    <strong>{{ evento.titulo }}</strong>
+                    {% if evento.descricao %}
+                    <div class="table-subtext">{{ evento.descricao }}</div>
+                    {% endif %}
+                </td>
+                <td>{{ evento.tipo|replace('_', ' ')|title }}</td>
+                <td>{{ evento.data_exibicao().strftime('%d/%m/%Y') }}</td>
+                <td>{{ evento.hora_evento or '-' }}</td>
+                <td>
+                    {% if evento.prioridade == 'alta' %}
+                        <span class="badge danger">Alta</span>
+                    {% else %}
+                        <span class="badge info">Normal</span>
+                    {% endif %}
+                </td>
+                <td>{{ evento.repeticao|replace('_', ' ')|title }}</td>
+                <td>
+                    {% if evento.status == 'concluido' %}
+                        <span class="badge success">Concluído</span>
+                    {% else %}
+                        <span class="badge warning">Pendente</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if alerta == 'hoje' %}
+                        <span class="badge danger pulse-badge">Hoje</span>
+                    {% elif alerta == 'urgente' %}
+                        <span class="badge danger pulse-badge">Urgente</span>
+                    {% elif alerta == 'proximo' %}
+                        <span class="badge warning pulse-badge">Próximo</span>
+                    {% elif alerta == 'atrasado' %}
+                        <span class="badge danger">Atrasado</span>
+                    {% else %}
+                        <span class="badge info">Normal</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-column">
+                        <a href="{{ url_for('agenda.editar_evento', evento_id=evento.id) }}" class="btn btn-small btn-secondary">Editar</a>
+
+                        {% if evento.status != 'concluido' %}
+                        <form method="POST" action="{{ url_for('agenda.concluir_evento', evento_id=evento.id) }}">
+                            <button type="submit" class="btn btn-small btn-success">Concluir</button>
+                        </form>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('agenda.reabrir_evento', evento_id=evento.id) }}">
+                            <button type="submit" class="btn btn-small btn-primary">Reabrir</button>
+                        </form>
+                        {% endif %}
+
+                        <form method="POST" action="{{ url_for('agenda.excluir_evento', evento_id=evento.id) }}" onsubmit="return confirm('Deseja excluir este evento?');">
+                            <button type="submit" class="btn btn-small btn-danger">Excluir</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="10">Nenhum evento cadastrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -11,3 +11,4 @@ from app.models.conta_receber import ContaReceber
 from app.models.movimento_caixa import MovimentoCaixa
 from app.models.despesa_fixa import DespesaFixa
 from app.models.despesa_fixa_lancamento import DespesaFixaLancamento
+from app.models.agenda_evento import AgendaEvento

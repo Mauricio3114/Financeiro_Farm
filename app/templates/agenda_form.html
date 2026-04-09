@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if evento %}Editar Evento{% else %}Novo Evento{% endif %} | Financeiro Farm
+{% endblock %}
+
+{% block content %}
+<div class="page-top">
+    <div>
+        <h1 class="page-title">{% if evento %}Editar Evento{% else %}Novo Evento{% endif %}</h1>
+        <p class="page-subtitle">Cadastro de lembretes e compromissos importantes</p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="POST" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Farmácia *</label>
+            <select name="farmacia_id" required>
+                <option value="">Selecione</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if evento and evento.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Título *</label>
+            <input type="text" name="titulo" value="{{ evento.titulo if evento else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Tipo *</label>
+            {% set tipo = evento.tipo if evento else '' %}
+            <select name="tipo" required>
+                <option value="">Selecione</option>
+                <option value="aniversario" {% if tipo == 'aniversario' %}selected{% endif %}>Aniversário</option>
+                <option value="pagamento" {% if tipo == 'pagamento' %}selected{% endif %}>Pagamento</option>
+                <option value="documento" {% if tipo == 'documento' %}selected{% endif %}>Documento</option>
+                <option value="reuniao" {% if tipo == 'reuniao' %}selected{% endif %}>Reunião</option>
+                <option value="aviso_geral" {% if tipo == 'aviso_geral' %}selected{% endif %}>Aviso Geral</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Prioridade *</label>
+            {% set prioridade = evento.prioridade if evento else 'normal' %}
+            <select name="prioridade" required>
+                <option value="normal" {% if prioridade == 'normal' %}selected{% endif %}>Normal</option>
+                <option value="alta" {% if prioridade == 'alta' %}selected{% endif %}>Alta</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Repetição *</label>
+            {% set repeticao = evento.repeticao if evento else 'nenhuma' %}
+            <select name="repeticao" required>
+                <option value="nenhuma" {% if repeticao == 'nenhuma' %}selected{% endif %}>Não repetir</option>
+                <option value="anual" {% if repeticao == 'anual' %}selected{% endif %}>Anual</option>
+                <option value="mensal" {% if repeticao == 'mensal' %}selected{% endif %}>Mensal</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Data do Evento *</label>
+            <input type="date" name="data_evento" value="{{ evento.data_evento.strftime('%Y-%m-%d') if evento and evento.data_evento else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Hora</label>
+            <input type="time" name="hora_evento" value="{{ evento.hora_evento if evento and evento.hora_evento else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Status *</label>
+            {% set status = evento.status if evento else 'pendente' %}
+            <select name="status" required>
+                <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendente</option>
+                <option value="concluido" {% if status == 'concluido' %}selected{% endif %}>Concluído</option>
+            </select>
+        </div>
+
+        <div class="form-group full">
+            <label>Descrição</label>
+            <textarea name="descricao" rows="3">{{ evento.descricao if evento else '' }}</textarea>
+        </div>
+
+        <div class="form-group full">
+            <label>Observação</label>
+            <textarea name="observacao" rows="4">{{ evento.observacao if evento else '' }}</textarea>
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">
+                {% if evento %}Salvar Alterações{% else %}Salvar Evento{% endif %}
+            </button>
+            <a href="{{ url_for('agenda.listar_agenda') }}" class="btn btn-secondary">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

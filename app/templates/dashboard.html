@@ -65,6 +65,54 @@
 </div>
 {% endif %}
 
+{% if agenda_urgente > 0 %}
+<div class="agenda-alert-card pulse-box">
+    <div class="agenda-alert-header">
+        <div>
+            <h3>Agenda em alerta</h3>
+            <p>Você tem {{ agenda_urgente }} evento(s) próximo(s) ou urgente(s)</p>
+        </div>
+        <a href="{{ url_for('agenda.listar_agenda') }}" class="btn btn-primary">Abrir Agenda</a>
+    </div>
+
+    <div class="agenda-badge-row">
+        <span class="agenda-badge pulse-badge">Agenda {{ agenda_urgente }}</span>
+        {% if agenda_hoje > 0 %}
+        <span class="agenda-badge danger pulse-badge">Hoje: {{ agenda_hoje }}</span>
+        {% endif %}
+        <span class="agenda-badge info">Pendentes: {{ agenda_total_pendente }}</span>
+    </div>
+
+    <div class="agenda-dashboard-list">
+        {% for evento in agenda_proximos %}
+        {% set alerta = evento.nivel_alerta() %}
+        <div class="agenda-dashboard-item">
+            <div class="agenda-dashboard-main">
+                <strong>{{ evento.titulo }}</strong>
+                <span>{{ evento.farmacia.nome_fantasia }}</span>
+            </div>
+            <div class="agenda-dashboard-meta">
+                <span>{{ evento.tipo|replace('_', ' ')|title }}</span>
+                <span>{{ evento.data_exibicao().strftime('%d/%m/%Y') }}</span>
+                {% if evento.hora_evento %}
+                <span>{{ evento.hora_evento }}</span>
+                {% endif %}
+                {% if alerta == 'hoje' %}
+                    <span class="badge danger pulse-badge">Hoje</span>
+                {% elif alerta == 'urgente' %}
+                    <span class="badge danger pulse-badge">Urgente</span>
+                {% elif alerta == 'proximo' %}
+                    <span class="badge warning pulse-badge">Próximo</span>
+                {% elif alerta == 'atrasado' %}
+                    <span class="badge danger">Atrasado</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="premium-section">
     <h2 class="section-title">Indicadores Principais</h2>
     <div class="cards-grid">

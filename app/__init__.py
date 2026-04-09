@@ -37,6 +37,7 @@ def create_app():
     from app.routes.contas_receber import contas_receber_bp
     from app.routes.caixa import caixa_bp
     from app.routes.despesas_fixas import despesas_fixas_bp
+    from app.routes.agenda import agenda_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -52,6 +53,7 @@ def create_app():
     app.register_blueprint(contas_receber_bp)
     app.register_blueprint(caixa_bp)
     app.register_blueprint(despesas_fixas_bp)
+    app.register_blueprint(agenda_bp)
 
     @app.context_processor
     def inject_usuario():

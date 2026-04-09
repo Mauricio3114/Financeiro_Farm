@@ -17,6 +17,7 @@ from app.models import (
     ContaReceber,
     MovimentoCaixa,
     DespesaFixaLancamento,
+    AgendaEvento,
 )
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -48,56 +49,60 @@ def somar_vendas_periodo(farmacia_ids, inicio, fim):
     if not farmacia_ids:
         return 0.0
 
-    vendas = VendaDiaria.query.filter(
+    total = db.session.query(
+        func.sum(VendaDiaria.total_dia)
+    ).filter(
         VendaDiaria.farmacia_id.in_(farmacia_ids),
         VendaDiaria.data_venda >= inicio,
         VendaDiaria.data_venda <= fim
-    ).all()
+    ).scalar()
 
-    return float(sum(v.total_dia or 0 for v in vendas))
+    return float(total or 0)
 
 
 def somar_despesas_gerais_periodo(farmacia_ids, inicio, fim):
     if not farmacia_ids:
         return 0.0
 
-    despesas = Despesa.query.filter(
+    total = db.session.query(
+        func.sum(Despesa.valor)
+    ).filter(
         Despesa.farmacia_id.in_(farmacia_ids),
         Despesa.data_despesa >= inicio,
         Despesa.data_despesa <= fim
-    ).all()
+    ).scalar()
 
-    return float(sum(d.valor or 0 for d in despesas))
+    return float(total or 0)
 
 
 def somar_despesas_motos_periodo(farmacia_ids, inicio, fim):
     if not farmacia_ids:
         return 0.0
 
-    despesas = DespesaMoto.query.filter(
+    total = db.session.query(
+        func.sum(DespesaMoto.valor)
+    ).filter(
         DespesaMoto.farmacia_id.in_(farmacia_ids),
         DespesaMoto.data_despesa >= inicio,
         DespesaMoto.data_despesa <= fim
-    ).all()
+    ).scalar()
 
-    return float(sum(d.valor or 0 for d in despesas))
+    return float(total or 0)
 
 
 def somar_despesas_fixas_periodo(farmacia_ids, inicio, fim):
     if not farmacia_ids:
         return 0.0
 
-    despesas = DespesaFixaLancamento.query.filter(
+    total = db.session.query(
+        func.sum(DespesaFixaLancamento.valor)
+    ).filter(
         DespesaFixaLancamento.farmacia_id.in_(farmacia_ids),
         DespesaFixaLancamento.data_vencimento >= inicio,
         DespesaFixaLancamento.data_vencimento <= fim
-    ).all()
+    ).scalar()
 
-    for item in despesas:
-        item.preparar()
-
-    db.session.commit()
-    return float(sum(d.valor or 0 for d in despesas))
+    return float(total or 0)
 
 
 @dashboard_bp.route("/dashboard")
@@ -156,9 +161,17 @@ def dashboard():
         "pix": 0,
     }
 
+    agenda_proximos = []
+    agenda_hoje = 0
+    agenda_urgente = 0
+    agenda_total_pendente = 0
+
     if farmacia_ids_filtrados:
-        boletos_query = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids_filtrados))
-        boletos_query = boletos_query.filter(Boleto.data_vencimento >= data_inicio, Boleto.data_vencimento <= data_fim)
+        boletos_query = Boleto.query.filter(
+            Boleto.farmacia_id.in_(farmacia_ids_filtrados),
+            Boleto.data_vencimento >= data_inicio,
+            Boleto.data_vencimento <= data_fim
+        )
         boletos = boletos_query.order_by(Boleto.data_vencimento.asc()).all()
 
         for boleto in boletos:
@@ -172,7 +185,10 @@ def dashboard():
         soma_a_pagar = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
         soma_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
 
-        boletos_alerta = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids_filtrados)).order_by(Boleto.data_vencimento.asc()).all()
+        boletos_alerta = Boleto.query.filter(
+            Boleto.farmacia_id.in_(farmacia_ids_filtrados)
+        ).order_by(Boleto.data_vencimento.asc()).all()
+
         for boleto in boletos_alerta:
             boleto.preparar()
             if boleto.status != "pago":
@@ -180,39 +196,40 @@ def dashboard():
                 if 0 <= dias <= 2:
                     boletos_proximos.append((boleto, dias))
 
-        despesas_query = Despesa.query.filter(
+        total_despesas = float(db.session.query(
+            func.sum(Despesa.valor)
+        ).filter(
             Despesa.farmacia_id.in_(farmacia_ids_filtrados),
             Despesa.data_despesa >= data_inicio,
             Despesa.data_despesa <= data_fim
-        )
-        despesas = despesas_query.all()
-        total_despesas = sum(d.valor or 0 for d in despesas)
+        ).scalar() or 0)
 
-        despesas_motos_query = DespesaMoto.query.filter(
+        total_despesas_motos = float(db.session.query(
+            func.sum(DespesaMoto.valor)
+        ).filter(
             DespesaMoto.farmacia_id.in_(farmacia_ids_filtrados),
             DespesaMoto.data_despesa >= data_inicio,
             DespesaMoto.data_despesa <= data_fim
-        )
-        despesas_motos = despesas_motos_query.all()
-        total_despesas_motos = sum(d.valor or 0 for d in despesas_motos)
+        ).scalar() or 0)
 
-        despesas_fixas_query = DespesaFixaLancamento.query.filter(
+        despesas_fixas = DespesaFixaLancamento.query.filter(
             DespesaFixaLancamento.farmacia_id.in_(farmacia_ids_filtrados),
             DespesaFixaLancamento.data_vencimento >= data_inicio,
             DespesaFixaLancamento.data_vencimento <= data_fim
-        )
-        despesas_fixas = despesas_fixas_query.all()
+        ).all()
+
         for item in despesas_fixas:
             item.preparar()
+
         db.session.commit()
+
         total_despesas_fixas = sum(item.valor or 0 for item in despesas_fixas)
 
-        vendas_query = VendaDiaria.query.filter(
+        vendas = VendaDiaria.query.filter(
             VendaDiaria.farmacia_id.in_(farmacia_ids_filtrados),
             VendaDiaria.data_venda >= data_inicio,
             VendaDiaria.data_venda <= data_fim
-        )
-        vendas = vendas_query.all()
+        ).all()
 
         total_vendas = sum(v.total_dia or 0 for v in vendas)
         resumo_pagamentos["vista"] = sum(v.valor_vista or 0 for v in vendas)
@@ -221,25 +238,26 @@ def dashboard():
         resumo_pagamentos["credito"] = sum(v.valor_credito or 0 for v in vendas)
         resumo_pagamentos["pix"] = sum(v.valor_pix or 0 for v in vendas)
 
-        contas_receber_query = ContaReceber.query.filter(
+        contas_receber = ContaReceber.query.filter(
             ContaReceber.farmacia_id.in_(farmacia_ids_filtrados),
             ContaReceber.data_vencimento >= data_inicio,
             ContaReceber.data_vencimento <= data_fim
-        )
-        contas_receber = contas_receber_query.all()
+        ).all()
+
         for conta in contas_receber:
             conta.preparar()
+
         db.session.commit()
 
         total_receber = sum((c.valor or 0) for c in contas_receber if c.status in ["a_receber", "vencido"])
         total_recebido = sum((c.valor_recebido or c.valor or 0) for c in contas_receber if c.status == "recebido")
 
-        caixa_query = MovimentoCaixa.query.filter(
+        movimentos = MovimentoCaixa.query.filter(
             MovimentoCaixa.farmacia_id.in_(farmacia_ids_filtrados),
             MovimentoCaixa.data_movimento >= data_inicio,
             MovimentoCaixa.data_movimento <= data_fim
-        )
-        movimentos = caixa_query.all()
+        ).all()
+
         total_entradas_caixa = sum(m.valor or 0 for m in movimentos if m.tipo == "entrada")
         total_saidas_caixa = sum(m.valor or 0 for m in movimentos if m.tipo == "saida")
 
@@ -252,51 +270,85 @@ def dashboard():
             Moto.farmacia_id.in_(farmacia_ids_filtrados),
             Moto.ativa == True
         ).all()
+
         total_motos = len(motos)
         motos_revisao = [m for m in motos if m.precisa_revisao()]
 
-        top_categorias_db = db.session.query(
+        top_categorias = db.session.query(
             Despesa.categoria,
             func.sum(Despesa.valor)
         ).filter(
             Despesa.farmacia_id.in_(farmacia_ids_filtrados),
             Despesa.data_despesa >= data_inicio,
             Despesa.data_despesa <= data_fim
-        ).group_by(Despesa.categoria).order_by(func.sum(Despesa.valor).desc()).limit(5).all()
-        top_categorias = top_categorias_db
+        ).group_by(
+            Despesa.categoria
+        ).order_by(
+            func.sum(Despesa.valor).desc()
+        ).limit(5).all()
 
-        top_motos_db = db.session.query(
+        top_motos = db.session.query(
             Moto.modelo,
             Moto.placa,
             func.sum(DespesaMoto.valor)
-        ).join(DespesaMoto, DespesaMoto.moto_id == Moto.id).filter(
+        ).join(
+            DespesaMoto, DespesaMoto.moto_id == Moto.id
+        ).filter(
             DespesaMoto.farmacia_id.in_(farmacia_ids_filtrados),
             DespesaMoto.data_despesa >= data_inicio,
             DespesaMoto.data_despesa <= data_fim
-        ).group_by(Moto.id, Moto.modelo, Moto.placa).order_by(func.sum(DespesaMoto.valor).desc()).limit(5).all()
-        top_motos = top_motos_db
+        ).group_by(
+            Moto.id, Moto.modelo, Moto.placa
+        ).order_by(
+            func.sum(DespesaMoto.valor).desc()
+        ).limit(5).all()
 
-        top_entregadores_db = db.session.query(
+        top_entregadores = db.session.query(
             Entregador.nome,
             func.sum(DespesaMoto.valor)
-        ).join(DespesaMoto, DespesaMoto.entregador_id == Entregador.id).filter(
+        ).join(
+            DespesaMoto, DespesaMoto.entregador_id == Entregador.id
+        ).filter(
             DespesaMoto.farmacia_id.in_(farmacia_ids_filtrados),
             DespesaMoto.data_despesa >= data_inicio,
             DespesaMoto.data_despesa <= data_fim
-        ).group_by(Entregador.id, Entregador.nome).order_by(func.sum(DespesaMoto.valor).desc()).limit(5).all()
-        top_entregadores = top_entregadores_db
+        ).group_by(
+            Entregador.id, Entregador.nome
+        ).order_by(
+            func.sum(DespesaMoto.valor).desc()
+        ).limit(5).all()
 
         centros = defaultdict(float)
 
-        for item in despesas:
-            chave = item.centro_custo or "Não definido"
-            centros[chave] += float(item.valor or 0)
+        if total_despesas > 0:
+            centros["Geral"] += float(total_despesas)
 
-        for item in despesas_fixas:
-            chave = item.centro_custo or "Não definido"
-            centros[chave] += float(item.valor or 0)
+        if total_despesas_fixas > 0:
+            centros["Geral"] += float(total_despesas_fixas)
 
         top_centros = sorted(centros.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        eventos_agenda = AgendaEvento.query.filter(
+            AgendaEvento.farmacia_id.in_(farmacia_ids_filtrados),
+            AgendaEvento.status == "pendente"
+        ).all()
+
+        agenda_total_pendente = len(eventos_agenda)
+
+        eventos_alerta = []
+        for evento in eventos_agenda:
+            alerta = evento.nivel_alerta()
+
+            if alerta == "hoje":
+                agenda_hoje += 1
+            if alerta in ["hoje", "urgente", "proximo", "atrasado"]:
+                agenda_urgente += 1
+                eventos_alerta.append(evento)
+
+        agenda_proximos = sorted(
+            eventos_alerta,
+            key=lambda e: (e.data_exibicao(), e.hora_evento or "")
+        )[:5]
 
     receita_bruta = float(total_vendas)
     despesas_operacionais = float(total_despesas + total_despesas_motos + total_despesas_fixas)
@@ -316,7 +368,11 @@ def dashboard():
     fim_mes_anterior = ultimo_dia_mes_anterior
 
     if farmacia_ids_filtrados:
-        vendas_mes_atual = somar_vendas_periodo(farmacia_ids_filtrados, inicio_mes_atual, min(hoje, fim_mes_atual))
+        vendas_mes_atual = somar_vendas_periodo(
+            farmacia_ids_filtrados,
+            inicio_mes_atual,
+            min(hoje, fim_mes_atual)
+        )
         despesas_mes_atual = (
             somar_despesas_gerais_periodo(farmacia_ids_filtrados, inicio_mes_atual, min(hoje, fim_mes_atual))
             + somar_despesas_motos_periodo(farmacia_ids_filtrados, inicio_mes_atual, min(hoje, fim_mes_atual))
@@ -324,7 +380,11 @@ def dashboard():
         )
         lucro_mes_atual = vendas_mes_atual - despesas_mes_atual
 
-        vendas_mes_anterior = somar_vendas_periodo(farmacia_ids_filtrados, inicio_mes_anterior, fim_mes_anterior)
+        vendas_mes_anterior = somar_vendas_periodo(
+            farmacia_ids_filtrados,
+            inicio_mes_anterior,
+            fim_mes_anterior
+        )
         despesas_mes_anterior = (
             somar_despesas_gerais_periodo(farmacia_ids_filtrados, inicio_mes_anterior, fim_mes_anterior)
             + somar_despesas_motos_periodo(farmacia_ids_filtrados, inicio_mes_anterior, fim_mes_anterior)
@@ -369,7 +429,7 @@ def dashboard():
         total_vendas=total_vendas,
         total_entregadores=total_entregadores,
         total_motos=total_motos,
-        total_receber=total_receber,
+        total_receber=total_recebido,
         total_recebido=total_recebido,
         total_entradas_caixa=total_entradas_caixa,
         total_saidas_caixa=total_saidas_caixa,
@@ -399,5 +459,9 @@ def dashboard():
         lucro_mes_anterior=lucro_mes_anterior,
         previsao_receita=previsao_receita,
         previsao_despesas=previsao_despesas,
-        previsao_lucro=previsao_lucro
+        previsao_lucro=previsao_lucro,
+        agenda_proximos=agenda_proximos,
+        agenda_hoje=agenda_hoje,
+        agenda_urgente=agenda_urgente,
+        agenda_total_pendente=agenda_total_pendente
     )
