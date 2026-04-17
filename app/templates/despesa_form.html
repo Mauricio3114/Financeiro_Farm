@@ -36,27 +36,70 @@
             <select name="farmacia_id" required>
                 <option value="">Selecione</option>
                 {% for farmacia in farmacias %}
-                    {% if tipo_edicao == 'fixa' %}
-                        <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
-                            {{ farmacia.nome_fantasia }}
-                        </option>
-                    {% else %}
-                        <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
-                            {{ farmacia.nome_fantasia }}
-                        </option>
-                    {% endif %}
+                    <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
                 {% endfor %}
             </select>
         </div>
 
         <div class="form-group">
             <label>Categoria *</label>
-            <input type="text" name="categoria" value="{% if tipo_edicao == 'fixa' %}{{ despesa.categoria if despesa else '' }}{% else %}{{ despesa.categoria if despesa else '' }}{% endif %}" required>
+            {% set categoria_atual = despesa.categoria if despesa else '' %}
+            <select name="categoria" required>
+                <option value="">Selecione a categoria</option>
+
+                <optgroup label="Operacional">
+                    <option value="Energia" {% if categoria_atual == 'Energia' %}selected{% endif %}>Energia</option>
+                    <option value="Água" {% if categoria_atual == 'Água' %}selected{% endif %}>Água</option>
+                    <option value="Internet" {% if categoria_atual == 'Internet' %}selected{% endif %}>Internet</option>
+                    <option value="Sistema" {% if categoria_atual == 'Sistema' %}selected{% endif %}>Sistema</option>
+                    <option value="Telefone" {% if categoria_atual == 'Telefone' %}selected{% endif %}>Telefone</option>
+                    <option value="Material de Escritório" {% if categoria_atual == 'Material de Escritório' %}selected{% endif %}>Material de Escritório</option>
+                    <option value="Limpeza" {% if categoria_atual == 'Limpeza' %}selected{% endif %}>Limpeza</option>
+                    <option value="Taxas Bancárias" {% if categoria_atual == 'Taxas Bancárias' %}selected{% endif %}>Taxas Bancárias</option>
+                    <option value="Contador" {% if categoria_atual == 'Contador' %}selected{% endif %}>Contador</option>
+                    <option value="Impostos" {% if categoria_atual == 'Impostos' %}selected{% endif %}>Impostos</option>
+                </optgroup>
+
+                <optgroup label="Entregas">
+                    <option value="Combustível" {% if categoria_atual == 'Combustível' %}selected{% endif %}>Combustível</option>
+                    <option value="Manutenção Moto" {% if categoria_atual == 'Manutenção Moto' %}selected{% endif %}>Manutenção Moto</option>
+                    <option value="Troca de Óleo" {% if categoria_atual == 'Troca de Óleo' %}selected{% endif %}>Troca de Óleo</option>
+                    <option value="Pneus" {% if categoria_atual == 'Pneus' %}selected{% endif %}>Pneus</option>
+                    <option value="Peças" {% if categoria_atual == 'Peças' %}selected{% endif %}>Peças</option>
+                    <option value="Seguro Moto" {% if categoria_atual == 'Seguro Moto' %}selected{% endif %}>Seguro Moto</option>
+                    <option value="Documentação Moto" {% if categoria_atual == 'Documentação Moto' %}selected{% endif %}>Documentação Moto</option>
+                    <option value="Aluguel de Moto" {% if categoria_atual == 'Aluguel de Moto' %}selected{% endif %}>Aluguel de Moto</option>
+                </optgroup>
+
+                <optgroup label="Pessoal">
+                    <option value="Salários" {% if categoria_atual == 'Salários' %}selected{% endif %}>Salários</option>
+                    <option value="Comissão" {% if categoria_atual == 'Comissão' %}selected{% endif %}>Comissão</option>
+                    <option value="Vale Transporte" {% if categoria_atual == 'Vale Transporte' %}selected{% endif %}>Vale Transporte</option>
+                    <option value="Vale Alimentação" {% if categoria_atual == 'Vale Alimentação' %}selected{% endif %}>Vale Alimentação</option>
+                    <option value="Encargos" {% if categoria_atual == 'Encargos' %}selected{% endif %}>Encargos</option>
+                    <option value="Férias" {% if categoria_atual == 'Férias' %}selected{% endif %}>Férias</option>
+                    <option value="13º Salário" {% if categoria_atual == '13º Salário' %}selected{% endif %}>13º Salário</option>
+                    <option value="Treinamento" {% if categoria_atual == 'Treinamento' %}selected{% endif %}>Treinamento</option>
+                </optgroup>
+
+                <optgroup label="Estrutura">
+                    <option value="Aluguel" {% if categoria_atual == 'Aluguel' %}selected{% endif %}>Aluguel</option>
+                    <option value="Reforma" {% if categoria_atual == 'Reforma' %}selected{% endif %}>Reforma</option>
+                    <option value="Equipamentos" {% if categoria_atual == 'Equipamentos' %}selected{% endif %}>Equipamentos</option>
+                    <option value="Móveis" {% if categoria_atual == 'Móveis' %}selected{% endif %}>Móveis</option>
+                    <option value="Ar Condicionado" {% if categoria_atual == 'Ar Condicionado' %}selected{% endif %}>Ar Condicionado</option>
+                    <option value="Manutenção Predial" {% if categoria_atual == 'Manutenção Predial' %}selected{% endif %}>Manutenção Predial</option>
+                    <option value="Segurança" {% if categoria_atual == 'Segurança' %}selected{% endif %}>Segurança</option>
+                    <option value="Câmeras / Monitoramento" {% if categoria_atual == 'Câmeras / Monitoramento' %}selected{% endif %}>Câmeras / Monitoramento</option>
+                </optgroup>
+            </select>
         </div>
 
-        <div class="form-group full">
-            <label>Descrição / Nome *</label>
-            <input type="text" name="descricao" value="{% if tipo_edicao == 'fixa' %}{{ despesa.nome if despesa else '' }}{% else %}{{ despesa.descricao if despesa else '' }}{% endif %}" required>
+        <div class="form-group full" id="campo_descricao">
+            <label id="label_descricao">Descrição / Detalhe *</label>
+            <input type="text" name="descricao" id="descricao_input" value="{% if tipo_edicao == 'fixa' %}{{ despesa.nome if despesa else '' }}{% else %}{{ despesa.descricao if despesa else '' }}{% endif %}" required>
         </div>
 
         <div class="form-group">
@@ -115,13 +158,20 @@ function alternarCamposDespesa() {
     const tipo = document.getElementById('tipo_despesa') ? document.getElementById('tipo_despesa').value : "{{ tipo_edicao or '' }}";
     const camposNormais = document.querySelectorAll('.campo-normal');
     const camposFixos = document.querySelectorAll('.campo-fixa');
+    const labelDescricao = document.getElementById('label_descricao');
 
     if (tipo === 'fixa') {
         camposNormais.forEach(el => el.style.display = 'none');
         camposFixos.forEach(el => el.style.display = 'flex');
+        if (labelDescricao) {
+            labelDescricao.textContent = 'Nome da Despesa Fixa *';
+        }
     } else {
         camposNormais.forEach(el => el.style.display = 'flex');
         camposFixos.forEach(el => el.style.display = 'none');
+        if (labelDescricao) {
+            labelDescricao.textContent = 'Descrição / Detalhe *';
+        }
     }
 }
 
