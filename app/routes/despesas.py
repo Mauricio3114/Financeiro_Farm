@@ -114,7 +114,17 @@ def listar_categorias():
         CategoriaDespesa.nome.asc()
     ).all()
 
-    return render_template("categorias_despesa.html", categorias=categorias)
+    categoria_edicao_id = request.args.get("editar", type=int)
+    categoria_edicao = None
+
+    if categoria_edicao_id:
+        categoria_edicao = CategoriaDespesa.query.get_or_404(categoria_edicao_id)
+
+    return render_template(
+        "categorias_despesa.html",
+        categorias=categorias,
+        categoria_edicao=categoria_edicao
+    )
 
 
 @despesas_bp.route("/categorias/nova", methods=["POST"])
@@ -145,6 +155,47 @@ def nova_categoria():
     db.session.commit()
 
     flash("Categoria adicionada com sucesso.", "success")
+    return redirect(url_for("despesas.listar_categorias"))
+
+
+@despesas_bp.route("/categorias/editar/<int:categoria_id>", methods=["POST"])
+@login_required
+def editar_categoria(categoria_id):
+    categoria = CategoriaDespesa.query.get_or_404(categoria_id)
+
+    nome = (request.form.get("nome") or "").strip()
+    grupo = (request.form.get("grupo") or "Outros").strip()
+
+    if not nome:
+        flash("Informe o nome da categoria.", "danger")
+        return redirect(url_for("despesas.listar_categorias", editar=categoria_id))
+
+    existente = CategoriaDespesa.query.filter(
+        db.func.lower(CategoriaDespesa.nome) == nome.lower(),
+        CategoriaDespesa.id != categoria.id
+    ).first()
+
+    if existente:
+        flash("Já existe outra categoria com esse nome.", "warning")
+        return redirect(url_for("despesas.listar_categorias", editar=categoria_id))
+
+    nome_antigo = categoria.nome
+    categoria.nome = nome
+    categoria.grupo = grupo if grupo else "Outros"
+
+    if nome_antigo != nome:
+        despesas_normais = Despesa.query.filter_by(categoria=nome_antigo).all()
+        despesas_fixas = DespesaFixa.query.filter_by(categoria=nome_antigo).all()
+
+        for despesa in despesas_normais:
+            despesa.categoria = nome
+
+        for despesa_fixa in despesas_fixas:
+            despesa_fixa.categoria = nome
+
+    db.session.commit()
+
+    flash("Categoria atualizada com sucesso.", "success")
     return redirect(url_for("despesas.listar_categorias"))
 
 
