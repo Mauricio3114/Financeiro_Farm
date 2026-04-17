@@ -11,6 +11,20 @@
 </div>
 
 <div class="form-card" style="margin-bottom: 24px;">
+    <form method="GET" action="{{ url_for('despesas.listar_categorias') }}" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Buscar categoria</label>
+            <input type="text" name="q" placeholder="Digite o nome ou grupo da categoria" value="{{ busca or '' }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Buscar</button>
+            <a href="{{ url_for('despesas.listar_categorias') }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="form-card" style="margin-bottom: 24px;">
     {% if categoria_edicao %}
         <form method="POST" action="{{ url_for('despesas.editar_categoria', categoria_id=categoria_edicao.id) }}" class="form-grid two-columns">
             <div class="form-group">
@@ -86,7 +100,7 @@
                         {% endif %}
                     </td>
                     <td style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <a href="{{ url_for('despesas.listar_categorias', editar=categoria.id) }}" class="btn btn-secondary btn-sm">
+                        <a href="{{ url_for('despesas.listar_categorias', editar=categoria.id, q=busca) }}" class="btn btn-secondary btn-sm">
                             Editar
                         </a>
 
@@ -99,7 +113,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5">Nenhuma categoria cadastrada.</td>
+                    <td colspan="5">Nenhuma categoria encontrada.</td>
                 </tr>
                 {% endfor %}
             </tbody>

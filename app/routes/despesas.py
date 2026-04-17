@@ -109,7 +109,20 @@ def listar_despesas():
 @despesas_bp.route("/categorias")
 @login_required
 def listar_categorias():
-    categorias = CategoriaDespesa.query.order_by(
+    busca = (request.args.get("q") or "").strip()
+
+    query = CategoriaDespesa.query
+
+    if busca:
+        termo = f"%{busca}%"
+        query = query.filter(
+            db.or_(
+                CategoriaDespesa.nome.ilike(termo),
+                CategoriaDespesa.grupo.ilike(termo)
+            )
+        )
+
+    categorias = query.order_by(
         CategoriaDespesa.grupo.asc(),
         CategoriaDespesa.nome.asc()
     ).all()
@@ -123,7 +136,8 @@ def listar_categorias():
     return render_template(
         "categorias_despesa.html",
         categorias=categorias,
-        categoria_edicao=categoria_edicao
+        categoria_edicao=categoria_edicao,
+        busca=busca
     )
 
 
