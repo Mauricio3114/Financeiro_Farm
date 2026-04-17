@@ -3,16 +3,14 @@
 {% block title %}Despesas | Financeiro Farm{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-top">
     <div>
-        <h1>Despesas Gerais</h1>
-        <p>Controle das despesas das farmácias</p>
+        <h1 class="page-title">Despesas</h1>
+        <p class="page-subtitle">Controle unificado de despesas normais e fixas</p>
     </div>
-
-    <a href="{{ url_for('despesas.nova_despesa') }}" class="btn btn-primary">+ Nova Despesa</a>
 </div>
 
-<div class="filter-card">
+<div class="filter-card premium-filter">
     <form method="GET" class="filters-inline">
         <div class="form-group">
             <label>Farmácia</label>
@@ -26,39 +24,75 @@
             </select>
         </div>
 
+        <div class="form-group">
+            <label>Tipo</label>
+            <select name="tipo">
+                <option value="">Todos</option>
+                <option value="normal" {% if filtro_tipo == 'normal' %}selected{% endif %}>Normal</option>
+                <option value="fixa" {% if filtro_tipo == 'fixa' %}selected{% endif %}>Fixa</option>
+            </select>
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="{{ url_for('despesas.listar_despesas') }}" class="btn btn-secondary">Limpar</a>
+            <a href="{{ url_for('despesas.nova_despesa') }}" class="btn btn-success">+ Nova Despesa</a>
         </div>
     </form>
 </div>
 
 <div class="table-card">
+    <h3>Lista de Despesas</h3>
     <table>
         <thead>
             <tr>
+                <th>Tipo</th>
                 <th>Farmácia</th>
                 <th>Categoria</th>
                 <th>Descrição</th>
-                <th>Data</th>
-                <th>Forma Pagamento</th>
                 <th>Valor</th>
+                <th>Data / Referência</th>
+                <th>Extra</th>
+                <th>Status</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody>
             {% for despesa in despesas %}
             <tr>
-                <td>{{ despesa.farmacia.nome_fantasia }}</td>
+                <td>
+                    {% if despesa.tipo == 'fixa' %}
+                        <span class="badge info">Fixa</span>
+                    {% else %}
+                        <span class="badge warning">Normal</span>
+                    {% endif %}
+                </td>
+                <td>{{ despesa.farmacia }}</td>
                 <td>{{ despesa.categoria }}</td>
                 <td>{{ despesa.descricao }}</td>
-                <td>{{ despesa.data_despesa.strftime('%d/%m/%Y') }}</td>
-                <td>{{ despesa.forma_pagamento or '-' }}</td>
                 <td>R$ {{ "%.2f"|format(despesa.valor) }}</td>
                 <td>
-                    <div class="actions-row">
-                        <a href="{{ url_for('despesas.editar_despesa', despesa_id=despesa.id) }}" class="btn btn-small btn-secondary">Editar</a>
-                        <form method="POST" action="{{ url_for('despesas.excluir_despesa', despesa_id=despesa.id) }}" onsubmit="return confirm('Deseja excluir esta despesa?');">
+                    {% if despesa.data_ref %}
+                        {{ despesa.data_ref.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ despesa.extra }}</td>
+                <td>
+                    {% if despesa.status == 'Ativa' %}
+                        <span class="badge success">Ativa</span>
+                    {% elif despesa.status == 'Inativa' %}
+                        <span class="badge danger">Inativa</span>
+                    {% else %}
+                        <span class="badge info">{{ despesa.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="actions-column">
+                        <a href="{{ url_for('despesas.editar_despesa', tipo=despesa.tipo, despesa_id=despesa.id) }}" class="btn btn-small btn-secondary">Editar</a>
+
+                        <form method="POST" action="{{ url_for('despesas.excluir_despesa', tipo=despesa.tipo, despesa_id=despesa.id) }}" onsubmit="return confirm('Deseja excluir esta despesa?');">
                             <button type="submit" class="btn btn-small btn-danger">Excluir</button>
                         </form>
                     </div>
@@ -66,7 +100,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="7">Nenhuma despesa cadastrada.</td>
+                <td colspan="9">Nenhuma despesa encontrada.</td>
             </tr>
             {% endfor %}
         </tbody>

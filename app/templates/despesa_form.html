@@ -5,69 +5,100 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-top">
     <div>
-        <h1>{% if despesa %}Editar Despesa{% else %}Nova Despesa{% endif %}</h1>
-        <p>Lançamento de despesas gerais</p>
+        <h1 class="page-title">{% if despesa %}Editar Despesa{% else %}Nova Despesa{% endif %}</h1>
+        <p class="page-subtitle">Cadastro unificado de despesa normal ou fixa</p>
     </div>
 </div>
 
 <div class="form-card">
     <form method="POST" class="form-grid two-columns">
         <div class="form-group">
+            <label>Tipo da Despesa *</label>
+            {% if tipo_edicao %}
+                <select name="tipo_despesa" id="tipo_despesa" required disabled>
+                    <option value="normal" {% if tipo_edicao == 'normal' %}selected{% endif %}>Normal</option>
+                    <option value="fixa" {% if tipo_edicao == 'fixa' %}selected{% endif %}>Fixa</option>
+                </select>
+                <input type="hidden" name="tipo_despesa" value="{{ tipo_edicao }}">
+            {% else %}
+                <select name="tipo_despesa" id="tipo_despesa" required onchange="alternarCamposDespesa()">
+                    <option value="">Selecione</option>
+                    <option value="normal">Normal</option>
+                    <option value="fixa">Fixa</option>
+                </select>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
             <label>Farmácia *</label>
             <select name="farmacia_id" required>
                 <option value="">Selecione</option>
                 {% for farmacia in farmacias %}
-                    <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
-                        {{ farmacia.nome_fantasia }}
-                    </option>
+                    {% if tipo_edicao == 'fixa' %}
+                        <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
+                            {{ farmacia.nome_fantasia }}
+                        </option>
+                    {% else %}
+                        <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
+                            {{ farmacia.nome_fantasia }}
+                        </option>
+                    {% endif %}
                 {% endfor %}
             </select>
         </div>
 
         <div class="form-group">
             <label>Categoria *</label>
-            <input type="text" name="categoria" value="{{ despesa.categoria if despesa else '' }}" required>
-        </div>
-
-        <div class="form-group">
-            <label>Centro de Custo</label>
-            <select name="centro_custo">
-                {% set cc = despesa.centro_custo if despesa else '' %}
-                <option value="">Selecione</option>
-                <option value="Administrativo" {% if cc == 'Administrativo' %}selected{% endif %}>Administrativo</option>
-                <option value="Entregas" {% if cc == 'Entregas' %}selected{% endif %}>Entregas</option>
-                <option value="Loja" {% if cc == 'Loja' %}selected{% endif %}>Loja</option>
-                <option value="RH" {% if cc == 'RH' %}selected{% endif %}>RH</option>
-                <option value="Marketing" {% if cc == 'Marketing' %}selected{% endif %}>Marketing</option>
-                <option value="Manutenção" {% if cc == 'Manutenção' %}selected{% endif %}>Manutenção</option>
-            </select>
+            <input type="text" name="categoria" value="{% if tipo_edicao == 'fixa' %}{{ despesa.categoria if despesa else '' }}{% else %}{{ despesa.categoria if despesa else '' }}{% endif %}" required>
         </div>
 
         <div class="form-group full">
-            <label>Descrição *</label>
-            <input type="text" name="descricao" value="{{ despesa.descricao if despesa else '' }}" required>
+            <label>Descrição / Nome *</label>
+            <input type="text" name="descricao" value="{% if tipo_edicao == 'fixa' %}{{ despesa.nome if despesa else '' }}{% else %}{{ despesa.descricao if despesa else '' }}{% endif %}" required>
         </div>
 
         <div class="form-group">
             <label>Valor *</label>
-            <input type="text" name="valor" value="{{ despesa.valor if despesa else '' }}" required>
+            <input type="text" name="valor" value="{% if tipo_edicao == 'fixa' %}{{ despesa.valor_padrao if despesa else '' }}{% else %}{{ despesa.valor if despesa else '' }}{% endif %}" required>
         </div>
 
-        <div class="form-group">
-            <label>Data da Despesa *</label>
-            <input type="date" name="data_despesa" value="{{ despesa.data_despesa.strftime('%Y-%m-%d') if despesa and despesa.data_despesa else '' }}" required>
+        <div class="form-group campo-normal" id="campo_data_despesa">
+            <label>Data da Despesa</label>
+            <input type="date" name="data_despesa" value="{% if tipo_edicao == 'normal' and despesa and despesa.data_despesa %}{{ despesa.data_despesa.strftime('%Y-%m-%d') }}{% endif %}">
         </div>
 
-        <div class="form-group">
+        <div class="form-group campo-normal" id="campo_forma_pagamento">
             <label>Forma de Pagamento</label>
-            <input type="text" name="forma_pagamento" value="{{ despesa.forma_pagamento if despesa else '' }}">
+            <input type="text" name="forma_pagamento" value="{% if tipo_edicao == 'normal' %}{{ despesa.forma_pagamento if despesa else '' }}{% endif %}">
+        </div>
+
+        <div class="form-group campo-fixa" id="campo_dia_vencimento">
+            <label>Dia do Vencimento</label>
+            <input type="number" name="dia_vencimento" min="1" max="31" value="{% if tipo_edicao == 'fixa' %}{{ despesa.dia_vencimento if despesa else '' }}{% endif %}">
+        </div>
+
+        <div class="form-group campo-fixa" id="campo_tipo_valor">
+            <label>Tipo do Valor</label>
+            <select name="tipo_valor">
+                <option value="">Selecione</option>
+                <option value="fixa" {% if tipo_edicao == 'fixa' and despesa and despesa.tipo_valor == 'fixa' %}selected{% endif %}>Fixa</option>
+                <option value="variavel" {% if tipo_edicao == 'fixa' and despesa and despesa.tipo_valor == 'variavel' %}selected{% endif %}>Variável</option>
+            </select>
+        </div>
+
+        <div class="form-group campo-fixa" id="campo_ativa">
+            <label>Status</label>
+            <select name="ativa">
+                <option value="1" {% if not despesa or (tipo_edicao == 'fixa' and despesa.ativa) %}selected{% endif %}>Ativa</option>
+                <option value="0" {% if tipo_edicao == 'fixa' and despesa and not despesa.ativa %}selected{% endif %}>Inativa</option>
+            </select>
         </div>
 
         <div class="form-group full">
             <label>Observação</label>
-            <textarea name="observacao" rows="4">{{ despesa.observacao if despesa else '' }}</textarea>
+            <textarea name="observacao" rows="4">{% if tipo_edicao == 'fixa' %}{{ despesa.observacao if despesa else '' }}{% else %}{{ despesa.observacao if despesa else '' }}{% endif %}</textarea>
         </div>
 
         <div class="form-actions full">
@@ -78,4 +109,24 @@
         </div>
     </form>
 </div>
+
+<script>
+function alternarCamposDespesa() {
+    const tipo = document.getElementById('tipo_despesa') ? document.getElementById('tipo_despesa').value : "{{ tipo_edicao or '' }}";
+    const camposNormais = document.querySelectorAll('.campo-normal');
+    const camposFixos = document.querySelectorAll('.campo-fixa');
+
+    if (tipo === 'fixa') {
+        camposNormais.forEach(el => el.style.display = 'none');
+        camposFixos.forEach(el => el.style.display = 'flex');
+    } else {
+        camposNormais.forEach(el => el.style.display = 'flex');
+        camposFixos.forEach(el => el.style.display = 'none');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    alternarCamposDespesa();
+});
+</script>
 {% endblock %}

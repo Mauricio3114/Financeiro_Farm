@@ -118,18 +118,7 @@
                     </div>
                 </div>
 
-                <div class="menu-group open">
-                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
-                        <span>Despesas</span>
-                        <span class="arrow">▶</span>
-                    </button>
-                    <div class="submenu">
-                        <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
-                        <a href="{{ url_for('despesas_fixas.listar_despesas_fixas') }}">Despesas Fixas</a>
-                        <a href="{{ url_for('despesas_fixas.listar_lancamentos') }}">Lançamentos Fixos</a>
-                    </div>
-                </div>
-
+                <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
                 <a href="{{ url_for('agenda.listar_agenda') }}">Agenda</a>
                 <a href="{{ url_for('entregadores.listar_entregadores') }}">Entregadores</a>
 
