@@ -1,9 +1,12 @@
 from calendar import monthrange
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from types import SimpleNamespace
+
 from flask import Blueprint, render_template, request
 from flask_login import login_required, current_user
 from sqlalchemy import func
+
 from app import db
 from app.models import (
     Farmacia,
@@ -328,27 +331,30 @@ def dashboard():
 
         top_centros = sorted(centros.items(), key=lambda x: x[1], reverse=True)[:5]
 
-        eventos_agenda = AgendaEvento.query.filter(
-            AgendaEvento.farmacia_id.in_(farmacia_ids_filtrados),
-            AgendaEvento.status == "pendente"
-        ).all()
+    # 🔥 AGENDA GLOBAL (sem vínculo com farmácia)
+    eventos_agenda = AgendaEvento.query.filter(
+        AgendaEvento.status == "pendente"
+    ).all()
 
-        agenda_total_pendente = len(eventos_agenda)
+    agenda_total_pendente = len(eventos_agenda)
 
-        eventos_alerta = []
-        for evento in eventos_agenda:
-            alerta = evento.nivel_alerta()
+    eventos_alerta = []
+    for evento in eventos_agenda:
+        alerta = evento.nivel_alerta()
 
-            if alerta == "hoje":
-                agenda_hoje += 1
-            if alerta in ["hoje", "urgente", "proximo", "atrasado"]:
-                agenda_urgente += 1
-                eventos_alerta.append(evento)
+        # mantém compatibilidade com dashboard.html atual
+        evento.farmacia = SimpleNamespace(nome_fantasia="Agenda Geral")
 
-        agenda_proximos = sorted(
-            eventos_alerta,
-            key=lambda e: (e.data_exibicao(), e.hora_evento or "")
-        )[:5]
+        if alerta == "hoje":
+            agenda_hoje += 1
+        if alerta in ["hoje", "urgente", "proximo", "atrasado"]:
+            agenda_urgente += 1
+            eventos_alerta.append(evento)
+
+    agenda_proximos = sorted(
+        eventos_alerta,
+        key=lambda e: (e.data_exibicao(), e.hora_evento or "")
+    )[:5]
 
     receita_bruta = float(total_vendas)
     despesas_operacionais = float(total_despesas + total_despesas_motos + total_despesas_fixas)
@@ -429,7 +435,7 @@ def dashboard():
         total_vendas=total_vendas,
         total_entregadores=total_entregadores,
         total_motos=total_motos,
-        total_receber=total_recebido,
+        total_receber=total_receber,
         total_recebido=total_recebido,
         total_entradas_caixa=total_entradas_caixa,
         total_saidas_caixa=total_saidas_caixa,

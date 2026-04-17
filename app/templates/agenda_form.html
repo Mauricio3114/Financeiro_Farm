@@ -15,19 +15,7 @@
 <div class="form-card">
     <form method="POST" class="form-grid two-columns">
         <div class="form-group">
-            <label>Farmácia *</label>
-            <select name="farmacia_id" required>
-                <option value="">Selecione</option>
-                {% for farmacia in farmacias %}
-                    <option value="{{ farmacia.id }}" {% if evento and evento.farmacia_id == farmacia.id %}selected{% endif %}>
-                        {{ farmacia.nome_fantasia }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Título *</label>
+            <label>Evento *</label>
             <input type="text" name="titulo" value="{{ evento.titulo if evento else '' }}" required>
         </div>
 

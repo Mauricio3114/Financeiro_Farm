@@ -6,7 +6,6 @@ class AgendaEvento(db.Model):
     __tablename__ = "agenda_eventos"
 
     id = db.Column(db.Integer, primary_key=True)
-    farmacia_id = db.Column(db.Integer, db.ForeignKey("farmacias.id"), nullable=False)
 
     titulo = db.Column(db.String(150), nullable=False)
     descricao = db.Column(db.Text, nullable=True)
@@ -20,8 +19,6 @@ class AgendaEvento(db.Model):
 
     status = db.Column(db.String(20), nullable=False, default="pendente")
     observacao = db.Column(db.Text, nullable=True)
-
-    farmacia = db.relationship("Farmacia")
 
     def dias_para_evento(self):
         hoje = date.today()
