@@ -1,26 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}Contas a Receber | Financeiro Farm{% endblock %}
+{% block title %}Contas a Receber{% endblock %}
 
 {% block content %}
-<div class="page-header">
+
+<div class="page-top">
     <div>
-        <h1>Contas a Receber</h1>
-        <p>Controle de recebimentos e valores pendentes</p>
+        <h1 class="page-title">Contas a Receber</h1>
+        <p class="page-subtitle">Controle de boletos a receber</p>
     </div>
 
-    <a href="{{ url_for('contas_receber.nova_conta_receber') }}" class="btn btn-primary">+ Nova Conta</a>
+    <a href="{{ url_for('contas_receber.nova_conta_receber') }}" class="btn btn-primary">
+        + Nova Conta
+    </a>
 </div>
 
-<div class="filter-card">
-    <form method="GET" class="filters-inline">
+<div class="form-card" style="margin-bottom:20px;">
+    <form method="GET" class="form-grid two-columns">
+
         <div class="form-group">
             <label>Farmácia</label>
             <select name="farmacia_id">
                 <option value="">Todas</option>
-                {% for farmacia in farmacias %}
-                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
-                        {{ farmacia.nome_fantasia }}
+                {% for f in farmacias %}
+                    <option value="{{ f.id }}" {% if filtro_farmacia_id == f.id %}selected{% endif %}>
+                        {{ f.nome_fantasia }}
                     </option>
                 {% endfor %}
             </select>
@@ -31,86 +35,78 @@
             <select name="status">
                 <option value="">Todos</option>
                 <option value="a_receber" {% if filtro_status == 'a_receber' %}selected{% endif %}>A Receber</option>
-                <option value="vencido" {% if filtro_status == 'vencido' %}selected{% endif %}>Vencido</option>
                 <option value="recebido" {% if filtro_status == 'recebido' %}selected{% endif %}>Recebido</option>
+                <option value="vencido" {% if filtro_status == 'vencido' %}selected{% endif %}>Vencido</option>
             </select>
         </div>
 
-        <div class="form-actions">
+        <div class="form-actions full">
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="{{ url_for('contas_receber.listar_contas_receber') }}" class="btn btn-secondary">Limpar</a>
         </div>
+
     </form>
 </div>
 
 <div class="table-card">
-    <table>
+    <table class="table">
         <thead>
             <tr>
-                <th>Farmácia</th>
                 <th>Cliente</th>
-                <th>Vencimento</th>
-                <th>Recebimento</th>
+                <th>Descrição</th>
                 <th>Valor</th>
-                <th>Valor Recebido</th>
+                <th>Vencimento</th>
                 <th>Status</th>
-                <th>Ações</th>
+                <th style="width:260px;">Ações</th>
             </tr>
         </thead>
+
         <tbody>
-            {% for conta in contas %}
+        {% for c in contas %}
             <tr>
-                <td>{{ conta.farmacia.nome_fantasia }}</td>
-                <td>{{ conta.cliente_nome }}</td>
-                <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
-                <td>
-                    {% if conta.data_recebimento %}
-                        {{ conta.data_recebimento.strftime('%d/%m/%Y') }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>R$ {{ "%.2f"|format(conta.valor) }}</td>
-                <td>
-                    {% if conta.valor_recebido is not none %}
-                        R$ {{ "%.2f"|format(conta.valor_recebido) }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if conta.status == 'recebido' %}
-                        <span class="badge success">Recebido</span>
-                    {% elif conta.status == 'vencido' %}
-                        <span class="badge danger">Vencido</span>
-                    {% else %}
-                        <span class="badge warning">A Receber</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="actions-column">
-                        <a href="{{ url_for('contas_receber.editar_conta_receber', conta_id=conta.id) }}" class="btn btn-small btn-secondary">Editar</a>
+                <td><strong>{{ c.cliente_nome }}</strong></td>
+                <td>{{ c.descricao or '-' }}</td>
+                <td>R$ {{ "%.2f"|format(c.valor) }}</td>
+                <td>{{ c.data_vencimento.strftime('%d/%m/%Y') }}</td>
 
-                        {% if conta.status != 'recebido' %}
-                        <form method="POST" action="{{ url_for('contas_receber.receber_conta', conta_id=conta.id) }}" class="pay-form">
-                            <input type="date" name="data_recebimento" required>
-                            <input type="text" name="valor_recebido" placeholder="Valor recebido">
-                            <button type="submit" class="btn btn-small btn-success">Receber</button>
-                        </form>
-                        {% endif %}
+                <td>
+                    {% if c.status == 'recebido' %}
+                        <span class="badge badge-success">Recebido</span>
+                    {% elif c.status == 'vencido' %}
+                        <span class="badge badge-danger">Vencido</span>
+                    {% else %}
+                        <span class="badge badge-warning">A Receber</span>
+                    {% endif %}
+                </td>
 
-                        <form method="POST" action="{{ url_for('contas_receber.excluir_conta_receber', conta_id=conta.id) }}" onsubmit="return confirm('Deseja excluir esta conta?');">
-                            <button type="submit" class="btn btn-small btn-danger">Excluir</button>
-                        </form>
-                    </div>
+                <td style="display:flex; gap:6px; flex-wrap:wrap;">
+
+                    {% if c.status != 'recebido' %}
+                    <form method="POST" action="{{ url_for('contas_receber.receber_conta', conta_id=c.id) }}">
+                        <input type="date" name="data_recebimento" required style="width:120px;">
+                        <input type="text" name="valor_recebido" placeholder="Valor" style="width:80px;">
+                        <button type="submit" class="btn btn-success btn-sm">Receber</button>
+                    </form>
+                    {% endif %}
+
+                    <a href="{{ url_for('contas_receber.editar_conta_receber', conta_id=c.id) }}"
+                       class="btn btn-secondary btn-sm">Editar</a>
+
+                    <form method="POST"
+                          action="{{ url_for('contas_receber.excluir_conta_receber', conta_id=c.id) }}"
+                          onsubmit="return confirm('Deseja excluir?');">
+                        <button class="btn btn-danger btn-sm">Excluir</button>
+                    </form>
+
                 </td>
             </tr>
-            {% else %}
+        {% else %}
             <tr>
-                <td colspan="8">Nenhuma conta a receber cadastrada.</td>
+                <td colspan="6">Nenhuma conta encontrada.</td>
             </tr>
-            {% endfor %}
+        {% endfor %}
         </tbody>
     </table>
 </div>
+
 {% endblock %}
