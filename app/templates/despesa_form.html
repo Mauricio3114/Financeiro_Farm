@@ -68,6 +68,12 @@
                     <option value="Impostos" {% if categoria_atual == 'Impostos' %}selected{% endif %}>Impostos</option>
                     <option value="Locução" {% if categoria_atual == 'Locução' %}selected{% endif %}>Locução</option>
                     <option value="Impostos sobre Venda" {% if categoria_atual == 'Impostos sobre Venda' %}selected{% endif %}>Impostos sobre Venda</option>
+
+                    {% if categorias %}
+                        {% for cat in categorias if cat.grupo == 'Operacional' %}
+                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </optgroup>
 
                 <optgroup label="Entregas">
@@ -79,6 +85,12 @@
                     <option value="Seguro Moto" {% if categoria_atual == 'Seguro Moto' %}selected{% endif %}>Seguro Moto</option>
                     <option value="Documentação Moto" {% if categoria_atual == 'Documentação Moto' %}selected{% endif %}>Documentação Moto</option>
                     <option value="Aluguel de Moto" {% if categoria_atual == 'Aluguel de Moto' %}selected{% endif %}>Aluguel de Moto</option>
+
+                    {% if categorias %}
+                        {% for cat in categorias if cat.grupo == 'Entregas' %}
+                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </optgroup>
 
                 <optgroup label="Pessoal">
@@ -95,6 +107,12 @@
                     <option value="Férias" {% if categoria_atual == 'Férias' %}selected{% endif %}>Férias</option>
                     <option value="13º Salário" {% if categoria_atual == '13º Salário' %}selected{% endif %}>13º Salário</option>
                     <option value="Treinamento" {% if categoria_atual == 'Treinamento' %}selected{% endif %}>Treinamento</option>
+
+                    {% if categorias %}
+                        {% for cat in categorias if cat.grupo == 'Pessoal' %}
+                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </optgroup>
 
                 <optgroup label="Estrutura">
@@ -106,27 +124,23 @@
                     <option value="Manutenção Predial" {% if categoria_atual == 'Manutenção Predial' %}selected{% endif %}>Manutenção Predial</option>
                     <option value="Segurança" {% if categoria_atual == 'Segurança' %}selected{% endif %}>Segurança</option>
                     <option value="Câmeras / Monitoramento" {% if categoria_atual == 'Câmeras / Monitoramento' %}selected{% endif %}>Câmeras / Monitoramento</option>
+
+                    {% if categorias %}
+                        {% for cat in categorias if cat.grupo == 'Estrutura' %}
+                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </optgroup>
 
                 {% if categorias %}
-                    {% set ns = namespace(grupo='') %}
-                    {% for cat in categorias %}
-                        {% if ns.grupo != cat.grupo %}
-                            {% if not loop.first %}
-                                </optgroup>
-                            {% endif %}
-                            <optgroup label="{{ cat.grupo }} (Extras)">
-                            {% set ns.grupo = cat.grupo %}
-                        {% endif %}
-
-                        <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>
-                            {{ cat.nome }}
-                        </option>
-
-                        {% if loop.last %}
-                            </optgroup>
-                        {% endif %}
-                    {% endfor %}
+                    {% set outras = categorias | selectattr('grupo', 'equalto', 'Outros') | list %}
+                    {% if outras %}
+                        <optgroup label="Outros">
+                            {% for cat in outras %}
+                                <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
+                            {% endfor %}
+                        </optgroup>
+                    {% endif %}
                 {% endif %}
             </select>
         </div>
