@@ -6,6 +6,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .menu-group {
+            margin-bottom: 8px;
+        }
+
+        .menu-toggle {
+            width: 100%;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+            text-decoration: none;
+            color: #f8fafc;
+            background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            padding: 14px 12px;
+            border-radius: 14px;
+            transition: 0.2s ease;
+            font-weight: 700;
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .menu-toggle:hover {
+            transform: translateX(3px);
+            background: linear-gradient(90deg, rgba(59,130,246,0.45), rgba(59,130,246,0.18));
+        }
+
+        .menu-toggle .arrow {
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .menu-group.open .menu-toggle .arrow {
+            transform: rotate(90deg);
+        }
+
+        .submenu {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            padding-top: 8px;
+            padding-left: 12px;
+        }
+
+        .menu-group.open .submenu {
+            display: flex;
+        }
+
+        .submenu a {
+            text-decoration: none;
+            color: #dbeafe;
+            background: rgba(255,255,255,0.05);
+            padding: 11px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .submenu a:hover {
+            background: rgba(59,130,246,0.18);
+            color: #ffffff;
+            transform: translateX(2px);
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.08);
+            margin: 10px 0;
+            border-radius: 999px;
+        }
+
+        @media (max-width: 900px) {
+            .submenu {
+                padding-left: 8px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="layout">
@@ -19,20 +100,51 @@
             <nav class="menu">
                 <a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a>
                 <a href="{{ url_for('farmacias.listar_farmacias') }}">Farmácias</a>
+
                 {% if current_user.perfil == 'admin' %}
                 <a href="{{ url_for('usuarios.listar_usuarios') }}">Usuários</a>
                 {% endif %}
-                <a href="{{ url_for('boletos.listar_boletos') }}">Boletos</a>
-                <a href="{{ url_for('contas_receber.listar_contas_receber') }}">Contas a Receber</a>
-                <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
-                <a href="{{ url_for('despesas_fixas.listar_despesas_fixas') }}">Despesas Fixas</a>
-                <a href="{{ url_for('despesas_fixas.listar_lancamentos') }}">Lançamentos Fixos</a>
+
+                <div class="menu-group open">
+                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                        <span>Financeiro</span>
+                        <span class="arrow">▶</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="{{ url_for('boletos.listar_boletos') }}">Boletos</a>
+                        <a href="{{ url_for('contas_receber.listar_contas_receber') }}">Contas a Receber</a>
+                        <a href="{{ url_for('vendas.listar_vendas') }}">Vendas do Dia</a>
+                        <a href="{{ url_for('caixa.listar_caixa') }}">Fluxo de Caixa</a>
+                    </div>
+                </div>
+
+                <div class="menu-group open">
+                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                        <span>Despesas</span>
+                        <span class="arrow">▶</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
+                        <a href="{{ url_for('despesas_fixas.listar_despesas_fixas') }}">Despesas Fixas</a>
+                        <a href="{{ url_for('despesas_fixas.listar_lancamentos') }}">Lançamentos Fixos</a>
+                    </div>
+                </div>
+
                 <a href="{{ url_for('agenda.listar_agenda') }}">Agenda</a>
-                <a href="{{ url_for('vendas.listar_vendas') }}">Vendas do Dia</a>
-                <a href="{{ url_for('caixa.listar_caixa') }}">Fluxo de Caixa</a>
                 <a href="{{ url_for('entregadores.listar_entregadores') }}">Entregadores</a>
-                <a href="{{ url_for('motos.listar_motos') }}">Motos</a>
-                <a href="{{ url_for('despesas_motos.listar_despesas_motos') }}">Despesas das Motos</a>
+
+                <div class="menu-group open">
+                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                        <span>Motos</span>
+                        <span class="arrow">▶</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="{{ url_for('motos.listar_motos') }}">Motos</a>
+                        <a href="{{ url_for('despesas_motos.listar_despesas_motos') }}">Despesas das Motos</a>
+                    </div>
+                </div>
+
+                <div class="menu-divider"></div>
                 <a href="{{ url_for('auth.logout') }}">Sair</a>
             </nav>
         </aside>
@@ -52,5 +164,12 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+
+    <script>
+        function toggleMenu(button) {
+            const group = button.closest('.menu-group');
+            group.classList.toggle('open');
+        }
+    </script>
 </body>
 </html>
