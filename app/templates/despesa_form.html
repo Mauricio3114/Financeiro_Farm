@@ -44,7 +44,13 @@
         </div>
 
         <div class="form-group">
-            <label>Categoria *</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px;">
+                <label style="margin:0;">Categoria *</label>
+                <a href="{{ url_for('despesas.listar_categorias') }}" class="btn btn-secondary" style="padding:6px 10px; font-size:12px;">
+                    + Gerenciar
+                </a>
+            </div>
+
             {% set categoria_atual = despesa.categoria if despesa else '' %}
             <select name="categoria" required>
                 <option value="">Selecione a categoria</option>
@@ -60,6 +66,8 @@
                     <option value="Taxas Bancárias" {% if categoria_atual == 'Taxas Bancárias' %}selected{% endif %}>Taxas Bancárias</option>
                     <option value="Contador" {% if categoria_atual == 'Contador' %}selected{% endif %}>Contador</option>
                     <option value="Impostos" {% if categoria_atual == 'Impostos' %}selected{% endif %}>Impostos</option>
+                    <option value="Locução" {% if categoria_atual == 'Locução' %}selected{% endif %}>Locução</option>
+                    <option value="Impostos sobre Venda" {% if categoria_atual == 'Impostos sobre Venda' %}selected{% endif %}>Impostos sobre Venda</option>
                 </optgroup>
 
                 <optgroup label="Entregas">
@@ -75,10 +83,15 @@
 
                 <optgroup label="Pessoal">
                     <option value="Salários" {% if categoria_atual == 'Salários' %}selected{% endif %}>Salários</option>
+                    <option value="Folha de Pagamento" {% if categoria_atual == 'Folha de Pagamento' %}selected{% endif %}>Folha de Pagamento</option>
+                    <option value="Vale Funcionário" {% if categoria_atual == 'Vale Funcionário' %}selected{% endif %}>Vale Funcionário</option>
+                    <option value="Vale Família Lima" {% if categoria_atual == 'Vale Família Lima' %}selected{% endif %}>Vale Família Lima</option>
                     <option value="Comissão" {% if categoria_atual == 'Comissão' %}selected{% endif %}>Comissão</option>
                     <option value="Vale Transporte" {% if categoria_atual == 'Vale Transporte' %}selected{% endif %}>Vale Transporte</option>
                     <option value="Vale Alimentação" {% if categoria_atual == 'Vale Alimentação' %}selected{% endif %}>Vale Alimentação</option>
                     <option value="Encargos" {% if categoria_atual == 'Encargos' %}selected{% endif %}>Encargos</option>
+                    <option value="INSS" {% if categoria_atual == 'INSS' %}selected{% endif %}>INSS</option>
+                    <option value="FGTS" {% if categoria_atual == 'FGTS' %}selected{% endif %}>FGTS</option>
                     <option value="Férias" {% if categoria_atual == 'Férias' %}selected{% endif %}>Férias</option>
                     <option value="13º Salário" {% if categoria_atual == '13º Salário' %}selected{% endif %}>13º Salário</option>
                     <option value="Treinamento" {% if categoria_atual == 'Treinamento' %}selected{% endif %}>Treinamento</option>
@@ -94,6 +107,27 @@
                     <option value="Segurança" {% if categoria_atual == 'Segurança' %}selected{% endif %}>Segurança</option>
                     <option value="Câmeras / Monitoramento" {% if categoria_atual == 'Câmeras / Monitoramento' %}selected{% endif %}>Câmeras / Monitoramento</option>
                 </optgroup>
+
+                {% if categorias %}
+                    {% set ns = namespace(grupo='') %}
+                    {% for cat in categorias %}
+                        {% if ns.grupo != cat.grupo %}
+                            {% if not loop.first %}
+                                </optgroup>
+                            {% endif %}
+                            <optgroup label="{{ cat.grupo }} (Extras)">
+                            {% set ns.grupo = cat.grupo %}
+                        {% endif %}
+
+                        <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>
+                            {{ cat.nome }}
+                        </option>
+
+                        {% if loop.last %}
+                            </optgroup>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
             </select>
         </div>
 

@@ -12,3 +12,6 @@ from app.models.movimento_caixa import MovimentoCaixa
 from app.models.despesa_fixa import DespesaFixa
 from app.models.despesa_fixa_lancamento import DespesaFixaLancamento
 from app.models.agenda_evento import AgendaEvento
+
+# 🔥 ADICIONA ESSA LINHA
+from app.models.categoria_despesa import CategoriaDespesa

@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
-from app.models import Farmacia, UsuarioFarmacia, Despesa, DespesaFixa
+from app.models import Farmacia, UsuarioFarmacia, Despesa, DespesaFixa, CategoriaDespesa
 
 despesas_bp = Blueprint("despesas", __name__, url_prefix="/despesas")
 
@@ -23,6 +23,13 @@ def farmacias_do_usuario(usuario):
 def usuario_tem_acesso_farmacia(usuario, farmacia_id):
     farmacias = farmacias_do_usuario(usuario)
     return any(f.id == farmacia_id for f in farmacias)
+
+
+def categorias_ativas():
+    return CategoriaDespesa.query.filter_by(ativa=True).order_by(
+        CategoriaDespesa.grupo.asc(),
+        CategoriaDespesa.nome.asc()
+    ).all()
 
 
 @despesas_bp.route("/")
@@ -99,10 +106,72 @@ def listar_despesas():
     )
 
 
+@despesas_bp.route("/categorias")
+@login_required
+def listar_categorias():
+    categorias = CategoriaDespesa.query.order_by(
+        CategoriaDespesa.grupo.asc(),
+        CategoriaDespesa.nome.asc()
+    ).all()
+
+    return render_template("categorias_despesa.html", categorias=categorias)
+
+
+@despesas_bp.route("/categorias/nova", methods=["POST"])
+@login_required
+def nova_categoria():
+    nome = (request.form.get("nome") or "").strip()
+    grupo = (request.form.get("grupo") or "Outros").strip()
+
+    if not nome:
+        flash("Informe o nome da categoria.", "danger")
+        return redirect(url_for("despesas.listar_categorias"))
+
+    existente = CategoriaDespesa.query.filter(
+        db.func.lower(CategoriaDespesa.nome) == nome.lower()
+    ).first()
+
+    if existente:
+        flash("Essa categoria já existe.", "warning")
+        return redirect(url_for("despesas.listar_categorias"))
+
+    categoria = CategoriaDespesa(
+        nome=nome,
+        grupo=grupo if grupo else "Outros",
+        ativa=True
+    )
+
+    db.session.add(categoria)
+    db.session.commit()
+
+    flash("Categoria adicionada com sucesso.", "success")
+    return redirect(url_for("despesas.listar_categorias"))
+
+
+@despesas_bp.route("/categorias/excluir/<int:categoria_id>", methods=["POST"])
+@login_required
+def excluir_categoria(categoria_id):
+    categoria = CategoriaDespesa.query.get_or_404(categoria_id)
+
+    uso_despesa_normal = Despesa.query.filter_by(categoria=categoria.nome).first()
+    uso_despesa_fixa = DespesaFixa.query.filter_by(categoria=categoria.nome).first()
+
+    if uso_despesa_normal or uso_despesa_fixa:
+        flash("Não é possível excluir essa categoria porque ela já está sendo usada em despesas.", "danger")
+        return redirect(url_for("despesas.listar_categorias"))
+
+    db.session.delete(categoria)
+    db.session.commit()
+
+    flash("Categoria excluída com sucesso.", "success")
+    return redirect(url_for("despesas.listar_categorias"))
+
+
 @despesas_bp.route("/nova", methods=["GET", "POST"])
 @login_required
 def nova_despesa():
     farmacias = farmacias_do_usuario(current_user)
+    categorias = categorias_ativas()
 
     if request.method == "POST":
         tipo_despesa = request.form.get("tipo_despesa", "").strip()
@@ -114,7 +183,12 @@ def nova_despesa():
 
         if not tipo_despesa or not farmacia_id or not categoria or not descricao:
             flash("Preencha os campos obrigatórios.", "danger")
-            return render_template("despesa_form.html", farmacias=farmacias, despesa=None)
+            return render_template(
+                "despesa_form.html",
+                farmacias=farmacias,
+                categorias=categorias,
+                despesa=None
+            )
 
         if not usuario_tem_acesso_farmacia(current_user, farmacia_id):
             flash("Você não tem acesso a essa farmácia.", "danger")
@@ -126,7 +200,12 @@ def nova_despesa():
 
             if not data_despesa:
                 flash("Informe a data da despesa.", "danger")
-                return render_template("despesa_form.html", farmacias=farmacias, despesa=None)
+                return render_template(
+                    "despesa_form.html",
+                    farmacias=farmacias,
+                    categorias=categorias,
+                    despesa=None
+                )
 
             despesa = Despesa(
                 farmacia_id=farmacia_id,
@@ -146,7 +225,12 @@ def nova_despesa():
 
             if not dia_vencimento or not tipo_valor:
                 flash("Preencha os campos da despesa fixa.", "danger")
-                return render_template("despesa_form.html", farmacias=farmacias, despesa=None)
+                return render_template(
+                    "despesa_form.html",
+                    farmacias=farmacias,
+                    categorias=categorias,
+                    despesa=None
+                )
 
             despesa_fixa = DespesaFixa(
                 farmacia_id=farmacia_id,
@@ -162,20 +246,31 @@ def nova_despesa():
 
         else:
             flash("Tipo de despesa inválido.", "danger")
-            return render_template("despesa_form.html", farmacias=farmacias, despesa=None)
+            return render_template(
+                "despesa_form.html",
+                farmacias=farmacias,
+                categorias=categorias,
+                despesa=None
+            )
 
         db.session.commit()
 
         flash("Despesa salva com sucesso.", "success")
         return redirect(url_for("despesas.listar_despesas"))
 
-    return render_template("despesa_form.html", farmacias=farmacias, despesa=None)
+    return render_template(
+        "despesa_form.html",
+        farmacias=farmacias,
+        categorias=categorias,
+        despesa=None
+    )
 
 
 @despesas_bp.route("/editar/<string:tipo>/<int:despesa_id>", methods=["GET", "POST"])
 @login_required
 def editar_despesa(tipo, despesa_id):
     farmacias = farmacias_do_usuario(current_user)
+    categorias = categorias_ativas()
 
     if tipo == "normal":
         despesa = Despesa.query.get_or_404(despesa_id)
@@ -195,7 +290,17 @@ def editar_despesa(tipo, despesa_id):
 
             if not farmacia_id or not categoria or not descricao or not data_despesa:
                 flash("Preencha os campos obrigatórios.", "danger")
-                return render_template("despesa_form.html", farmacias=farmacias, despesa=despesa, tipo_edicao="normal")
+                return render_template(
+                    "despesa_form.html",
+                    farmacias=farmacias,
+                    categorias=categorias,
+                    despesa=despesa,
+                    tipo_edicao="normal"
+                )
+
+            if not usuario_tem_acesso_farmacia(current_user, farmacia_id):
+                flash("Você não tem acesso a essa farmácia.", "danger")
+                return redirect(url_for("despesas.listar_despesas"))
 
             despesa.farmacia_id = farmacia_id
             despesa.categoria = categoria
@@ -209,7 +314,13 @@ def editar_despesa(tipo, despesa_id):
             flash("Despesa atualizada com sucesso.", "success")
             return redirect(url_for("despesas.listar_despesas"))
 
-        return render_template("despesa_form.html", farmacias=farmacias, despesa=despesa, tipo_edicao="normal")
+        return render_template(
+            "despesa_form.html",
+            farmacias=farmacias,
+            categorias=categorias,
+            despesa=despesa,
+            tipo_edicao="normal"
+        )
 
     elif tipo == "fixa":
         despesa = DespesaFixa.query.get_or_404(despesa_id)
@@ -230,7 +341,17 @@ def editar_despesa(tipo, despesa_id):
 
             if not farmacia_id or not categoria or not descricao or not dia_vencimento or not tipo_valor:
                 flash("Preencha os campos obrigatórios.", "danger")
-                return render_template("despesa_form.html", farmacias=farmacias, despesa=despesa, tipo_edicao="fixa")
+                return render_template(
+                    "despesa_form.html",
+                    farmacias=farmacias,
+                    categorias=categorias,
+                    despesa=despesa,
+                    tipo_edicao="fixa"
+                )
+
+            if not usuario_tem_acesso_farmacia(current_user, farmacia_id):
+                flash("Você não tem acesso a essa farmácia.", "danger")
+                return redirect(url_for("despesas.listar_despesas"))
 
             despesa.farmacia_id = farmacia_id
             despesa.categoria = categoria
@@ -245,7 +366,13 @@ def editar_despesa(tipo, despesa_id):
             flash("Despesa fixa atualizada com sucesso.", "success")
             return redirect(url_for("despesas.listar_despesas"))
 
-        return render_template("despesa_form.html", farmacias=farmacias, despesa=despesa, tipo_edicao="fixa")
+        return render_template(
+            "despesa_form.html",
+            farmacias=farmacias,
+            categorias=categorias,
+            despesa=despesa,
+            tipo_edicao="fixa"
+        )
 
     flash("Tipo inválido.", "danger")
     return redirect(url_for("despesas.listar_despesas"))
