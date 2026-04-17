@@ -111,8 +111,18 @@
                         <span class="arrow">▶</span>
                     </button>
                     <div class="submenu">
-                        <a href="{{ url_for('boletos.listar_boletos') }}">Boletos</a>
-                        <a href="{{ url_for('contas_receber.listar_contas_receber') }}">Contas a Receber</a>
+
+                        <div class="menu-group open">
+                            <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                                <span>Boletos</span>
+                                <span class="arrow">▶</span>
+                            </button>
+                            <div class="submenu">
+                                <a href="{{ url_for('boletos.listar_boletos') }}">A Pagar</a>
+                                <a href="{{ url_for('contas_receber.listar_contas_receber') }}">A Receber</a>
+                            </div>
+                        </div>
+
                         <a href="{{ url_for('vendas.listar_vendas') }}">Vendas do Dia</a>
                         <a href="{{ url_for('caixa.listar_caixa') }}">Fluxo de Caixa</a>
                     </div>
@@ -121,6 +131,7 @@
                 <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
                 <a href="{{ url_for('agenda.listar_agenda') }}">Agenda</a>
                 <a href="{{ url_for('entregadores.listar_entregadores') }}">Entregadores</a>
+                <a href="{{ url_for('despesas.listar_categorias') }}">Categorias de Despesa</a>
 
                 <div class="menu-group open">
                     <button type="button" class="menu-toggle" onclick="toggleMenu(this)">

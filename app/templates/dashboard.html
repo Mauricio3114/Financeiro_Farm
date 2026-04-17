@@ -3,11 +3,248 @@
 {% block title %}Dashboard | Financeiro Farm{% endblock %}
 
 {% block content %}
+
+<style>
+.agenda-alert-card {
+    background: linear-gradient(135deg, #fff8e1, #fff3cd);
+    border: 1px solid #ffe082;
+    border-left: 6px solid #f59e0b;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+.agenda-alert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.agenda-alert-header h3 {
+    margin: 0;
+    font-size: 22px;
+    color: #7c2d12;
+}
+
+.agenda-alert-header p {
+    margin: 6px 0 0;
+    color: #92400e;
+    font-size: 14px;
+}
+
+.agenda-badge-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.agenda-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.agenda-badge.danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.agenda-badge.info {
+    background: #2563eb;
+    color: #fff;
+}
+
+.agenda-dashboard-list {
+    display: grid;
+    gap: 12px;
+}
+
+.agenda-dashboard-item {
+    background: #fff;
+    border: 1px solid #f3f4f6;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.agenda-dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.agenda-dashboard-main strong {
+    font-size: 15px;
+    color: #111827;
+}
+
+.agenda-dashboard-main span {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.agenda-dashboard-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: #374151;
+}
+
+.pulse-box {
+    animation: pulseBox 1.7s infinite;
+}
+
+.pulse-badge {
+    animation: pulseBadge 1.2s infinite;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge.warning {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.badge.danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.dashboard-top-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 18px;
+}
+
+.agenda-top-badge-link {
+    text-decoration: none;
+}
+
+.agenda-top-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1e3a8a;
+    border: 1px solid rgba(37, 99, 235, 0.15);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.10);
+    transition: 0.2s ease;
+}
+
+.agenda-top-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.16);
+}
+
+.agenda-top-badge.normal {
+    background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    color: #111827;
+}
+
+.agenda-top-badge.proximo {
+    background: linear-gradient(135deg, #fde68a, #fbbf24);
+    color: #78350f;
+}
+
+.agenda-top-badge.urgente {
+    background: linear-gradient(135deg, #fca5a5, #ef4444);
+    color: #fff;
+}
+
+.agenda-top-badge .contador {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.22);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+@keyframes pulseBox {
+    0% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 14px rgba(245, 158, 11, 0.00);
+        transform: scale(1.005);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.00);
+        transform: scale(1);
+    }
+}
+
+@keyframes pulseBadge {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.08);
+        opacity: 0.82;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+</style>
+
 <div class="page-top">
     <div>
         <h1 class="page-title">Dashboard Financeiro Premium</h1>
         <p class="page-subtitle">Resumo geral do sistema em {{ hoje.strftime('%d/%m/%Y') }}</p>
     </div>
+</div>
+
+<div class="dashboard-top-actions">
+    <a href="{{ url_for('agenda.listar_agenda') }}" class="agenda-top-badge-link">
+        <div class="agenda-top-badge {% if agenda_hoje > 0 or agenda_urgente > 0 %}urgente pulse-badge{% elif agenda_total_pendente > 0 %}proximo{% else %}normal{% endif %}">
+            <span>Agenda</span>
+            <span class="contador">
+                {% if agenda_urgente > 0 %}
+                    {{ agenda_urgente }}
+                {% else %}
+                    {{ agenda_total_pendente }}
+                {% endif %}
+            </span>
+        </div>
+    </a>
 </div>
 
 <div class="filter-card premium-filter">
