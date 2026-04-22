@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório Financeiro Completo | Financeiro Farm{% endblock %}
+
+{% block content %}
+<style>
+.relatorio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.relatorio-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.relatorio-subtitle {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.relatorio-toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.relatorio-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.relatorio-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.relatorio-card-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.relatorio-card-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+.relatorio-card.blue { border-left: 6px solid #2563eb; }
+.relatorio-card.red { border-left: 6px solid #ef4444; }
+.relatorio-card.orange { border-left: 6px solid #f59e0b; }
+.relatorio-card.purple { border-left: 6px solid #7c3aed; }
+.relatorio-card.yellow { border-left: 6px solid #eab308; }
+.relatorio-card.green { border-left: 6px solid #16a34a; }
+.relatorio-card.teal { border-left: 6px solid #0f766e; }
+.relatorio-card.dark { border-left: 6px solid #334155; }
+
+.resultado-box {
+    margin-top: 22px;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #fff;
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.18);
+}
+
+.resultado-box h2 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+.resultado-box h1 {
+    margin: 0;
+    font-size: 42px;
+    font-weight: 900;
+    color: #fff;
+}
+
+.resultado-box.positivo {
+    background: linear-gradient(135deg, #065f46, #16a34a);
+}
+
+.resultado-box.negativo {
+    background: linear-gradient(135deg, #7f1d1d, #dc2626);
+}
+</style>
+
+<div class="relatorio-header">
+    <div>
+        <h1 class="relatorio-title">📊 Relatório Financeiro Completo</h1>
+        <p class="relatorio-subtitle">Visão consolidada das finanças da farmácia</p>
+    </div>
+
+    <div class="relatorio-toolbar">
+        <a href="{{ url_for('relatorios.relatorio_financeiro_completo_pdf', data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'), farmacia_id=request.args.get('farmacia_id')) }}"
+           class="btn btn-danger">
+            PDF
+        </a>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="GET" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Data Inicial</label>
+            <input type="date" name="data_inicio" value="{{ request.args.get('data_inicio', '') }}">
+        </div>
+
+        <div class="form-group">
+            <label>Data Final</label>
+            <input type="date" name="data_fim" value="{{ request.args.get('data_fim', '') }}">
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('relatorios.relatorio_financeiro_completo') }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="relatorio-card-grid">
+    <div class="relatorio-card blue">
+        <div class="relatorio-card-label">💰 Vendas</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(vendas) }}</div>
+    </div>
+
+    <div class="relatorio-card red">
+        <div class="relatorio-card-label">💸 Despesas Gerais</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(despesas) }}</div>
+    </div>
+
+    <div class="relatorio-card orange">
+        <div class="relatorio-card-label">🏍️ Despesas das Motos</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(motos) }}</div>
+    </div>
+
+    <div class="relatorio-card purple">
+        <div class="relatorio-card-label">📌 Despesas Fixas</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(fixas) }}</div>
+    </div>
+
+    <div class="relatorio-card yellow">
+        <div class="relatorio-card-label">📄 Boletos em Aberto</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(boletos_aberto) }}</div>
+    </div>
+
+    <div class="relatorio-card green">
+        <div class="relatorio-card-label">✔ Boletos Pagos</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(boletos_pagos) }}</div>
+    </div>
+
+    <div class="relatorio-card teal">
+        <div class="relatorio-card-label">🧾 A Receber</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(receber) }}</div>
+    </div>
+
+    <div class="relatorio-card dark">
+        <div class="relatorio-card-label">💵 Recebido</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(recebido) }}</div>
+    </div>
+</div>
+
+<div class="resultado-box {% if lucro >= 0 %}positivo{% else %}negativo{% endif %}">
+    <h2>🔥 Resultado Final</h2>
+    <h1>R$ {{ "%.2f"|format(lucro) }}</h1>
+</div>
+{% endblock %}

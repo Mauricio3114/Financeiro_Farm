@@ -125,6 +125,23 @@
 
                         <a href="{{ url_for('vendas.listar_vendas') }}">Vendas do Dia</a>
                         <a href="{{ url_for('caixa.listar_caixa') }}">Fluxo de Caixa</a>
+
+                        <div class="menu-group open">
+                            <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                                <span>Relatórios</span>
+                                <span class="arrow">▶</span>
+                            </button>
+                            <div class="submenu">
+                                <a href="{{ url_for('relatorios.relatorio_financeiro_completo') }}">📊 Relatório Geral</a>
+                                <a href="{{ url_for('relatorios.relatorio_vendas') }}">💰 Relatório de Vendas</a>
+                                <a href="{{ url_for('relatorios.relatorio_despesas') }}">💸 Relatório de Despesas</a>
+                                <a href="{{ url_for('relatorios.relatorio_despesas_motos') }}">🏍️ Relatório de Despesas das Motos</a>
+                                <a href="{{ url_for('relatorios.relatorio_despesas_fixas') }}">📌 Relatório de Despesas Fixas</a>
+                                <a href="{{ url_for('relatorios.relatorio_boletos_pagar') }}">📄 Relatório de Boletos a Pagar</a>
+                                <a href="{{ url_for('relatorios.relatorio_boletos_receber') }}">🧾 Relatório de Boletos a Receber</a>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 

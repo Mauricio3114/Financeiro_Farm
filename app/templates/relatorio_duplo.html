@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} | Financeiro Farm{% endblock %}
+
+{% block content %}
+<style>
+.relatorio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.relatorio-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.relatorio-subtitle {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.relatorio-toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.relatorio-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.relatorio-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.relatorio-card-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.relatorio-card-value {
+    font-size: 30px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.relatorio-card.blue { border-left: 6px solid #2563eb; }
+.relatorio-card.red { border-left: 6px solid #ef4444; }
+.relatorio-card.orange { border-left: 6px solid #f59e0b; }
+.relatorio-card.purple { border-left: 6px solid #7c3aed; }
+.relatorio-card.yellow { border-left: 6px solid #eab308; }
+.relatorio-card.green { border-left: 6px solid #16a34a; }
+.relatorio-card.teal { border-left: 6px solid #0f766e; }
+.relatorio-card.dark { border-left: 6px solid #334155; }
+</style>
+
+<div class="relatorio-header">
+    <div>
+        <h1 class="relatorio-title">{{ titulo }}</h1>
+        <p class="relatorio-subtitle">{{ subtitulo }}</p>
+    </div>
+
+    <div class="relatorio-toolbar">
+        <a href="{{ url_for(rota_pdf, data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'), farmacia_id=request.args.get('farmacia_id')) }}"
+           class="btn btn-danger">
+            PDF
+        </a>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="GET" class="form-grid two-columns">
+        <div class="form-group">
+            <label>Data Inicial</label>
+            <input type="date" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+
+        <div class="form-group">
+            <label>Data Final</label>
+            <input type="date" name="data_fim" value="{{ data_fim }}">
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ request.path }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="relatorio-card-grid">
+    <div class="relatorio-card {{ cor_1 }}">
+        <div class="relatorio-card-label">{{ label_1 }}</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(total_1) }}</div>
+    </div>
+
+    <div class="relatorio-card {{ cor_2 }}">
+        <div class="relatorio-card-label">{{ label_2 }}</div>
+        <div class="relatorio-card-value">R$ {{ "%.2f"|format(total_2) }}</div>
+    </div>
+</div>
+{% endblock %}
