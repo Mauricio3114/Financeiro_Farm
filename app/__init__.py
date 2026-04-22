@@ -1,3 +1,4 @@
+import os
 from flask import Flask, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
@@ -11,8 +12,24 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
 
+    # 🔥 AQUI É O SEGREDO (Render / Produção)
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        # Corrige problema do Render (postgres://)
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    else:
+        # Local (teu PC)
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///financeiro_farm.db"
+
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
     db.init_app(app)
     login_manager.init_app(app)
+
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Faça login para acessar o sistema."
     login_manager.login_message_category = "warning"
@@ -23,6 +40,7 @@ def create_app():
     def load_user(user_id):
         return Usuario.query.get(int(user_id))
 
+    # 🔥 IMPORTS
     from app.routes.auth import auth_bp
     from app.routes.dashboard import dashboard_bp
     from app.routes.farmacias import farmacias_bp
@@ -39,6 +57,7 @@ def create_app():
     from app.routes.despesas_fixas import despesas_fixas_bp
     from app.routes.agenda import agenda_bp
 
+    # 🔥 REGISTRO DAS ROTAS
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(farmacias_bp)
