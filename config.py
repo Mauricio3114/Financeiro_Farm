@@ -1,12 +1,13 @@
 import os
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
-
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "financeiro-farm-chave-secreta")
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        "sqlite:///" + os.path.join(BASE_DIR, "instance", "financeiro_farm.db")
-    )
+
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+
+    if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
+
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
