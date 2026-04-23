@@ -5,201 +5,292 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-top">
+<style>
+.form-shell {
+    display: grid;
+    gap: 18px;
+}
+
+.premium-box {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.premium-box h3 {
+    margin: 0 0 14px 0;
+    font-size: 17px;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.premium-box p {
+    margin: -4px 0 16px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.premium-box.parcelamento {
+    background: linear-gradient(135deg, #fff7ed, #fffbeb);
+    border-left: 6px solid #ea580c;
+}
+
+.premium-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #ffedd5;
+    color: #c2410c;
+    margin-left: 8px;
+}
+
+.page-header-premium {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.page-header-premium h1 {
+    margin: 0;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.page-header-premium p {
+    margin: 6px 0 0 0;
+    color: #64748b;
+}
+
+.form-grid.two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    border: 1px solid #dbe2ea;
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #ea580c;
+    box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.08);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.helper-text {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+    .form-grid.two-columns {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="page-header-premium">
     <div>
-        <h1 class="page-title">{% if despesa %}Editar Despesa{% else %}Nova Despesa{% endif %}</h1>
-        <p class="page-subtitle">Cadastro unificado de despesa normal ou fixa</p>
+        <h1>{% if despesa %}Editar Despesa{% else %}Nova Despesa{% endif %}</h1>
+        <p>Cadastro premium de despesa normal ou fixa</p>
     </div>
 </div>
 
-<div class="form-card">
-    <form method="POST" class="form-grid two-columns">
-        <div class="form-group">
-            <label>Tipo da Despesa *</label>
-            {% if tipo_edicao %}
-                <select name="tipo_despesa" id="tipo_despesa" required disabled>
-                    <option value="normal" {% if tipo_edicao == 'normal' %}selected{% endif %}>Normal</option>
-                    <option value="fixa" {% if tipo_edicao == 'fixa' %}selected{% endif %}>Fixa</option>
-                </select>
-                <input type="hidden" name="tipo_despesa" value="{{ tipo_edicao }}">
-            {% else %}
-                <select name="tipo_despesa" id="tipo_despesa" required onchange="alternarCamposDespesa()">
-                    <option value="">Selecione</option>
-                    <option value="normal">Normal</option>
-                    <option value="fixa">Fixa</option>
-                </select>
-            {% endif %}
-        </div>
+<form method="POST" class="form-shell">
+    <div class="premium-box">
+        <h3>🧾 Dados da despesa</h3>
+        <p>Escolha o tipo e informe os dados principais.</p>
 
-        <div class="form-group">
-            <label>Farmácia *</label>
-            <select name="farmacia_id" required>
-                <option value="">Selecione</option>
-                {% for farmacia in farmacias %}
-                    <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
-                        {{ farmacia.nome_fantasia }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px;">
-                <label style="margin:0;">Categoria *</label>
-                <a href="{{ url_for('despesas.listar_categorias') }}" class="btn btn-secondary" style="padding:6px 10px; font-size:12px;">
-                    + Gerenciar
-                </a>
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Tipo da Despesa *</label>
+                {% if tipo_edicao %}
+                    <select name="tipo_despesa" id="tipo_despesa" required disabled>
+                        <option value="normal" {% if tipo_edicao == 'normal' %}selected{% endif %}>Normal</option>
+                        <option value="fixa" {% if tipo_edicao == 'fixa' %}selected{% endif %}>Fixa</option>
+                    </select>
+                    <input type="hidden" name="tipo_despesa" value="{{ tipo_edicao }}">
+                {% else %}
+                    <select name="tipo_despesa" id="tipo_despesa" required onchange="alternarCamposDespesa()">
+                        <option value="">Selecione</option>
+                        <option value="normal">Normal</option>
+                        <option value="fixa">Fixa</option>
+                    </select>
+                {% endif %}
             </div>
 
-            {% set categoria_atual = despesa.categoria if despesa else '' %}
-            <select name="categoria" required>
-                <option value="">Selecione a categoria</option>
+            <div class="form-group">
+                <label>Farmácia *</label>
+                <select name="farmacia_id" required>
+                    <option value="">Selecione</option>
+                    {% for farmacia in farmacias %}
+                        <option value="{{ farmacia.id }}" {% if despesa and despesa.farmacia_id == farmacia.id %}selected{% endif %}>
+                            {{ farmacia.nome_fantasia }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-                <optgroup label="Operacional">
-                    <option value="Energia" {% if categoria_atual == 'Energia' %}selected{% endif %}>Energia</option>
-                    <option value="Água" {% if categoria_atual == 'Água' %}selected{% endif %}>Água</option>
-                    <option value="Internet" {% if categoria_atual == 'Internet' %}selected{% endif %}>Internet</option>
-                    <option value="Sistema" {% if categoria_atual == 'Sistema' %}selected{% endif %}>Sistema</option>
-                    <option value="Telefone" {% if categoria_atual == 'Telefone' %}selected{% endif %}>Telefone</option>
-                    <option value="Material de Escritório" {% if categoria_atual == 'Material de Escritório' %}selected{% endif %}>Material de Escritório</option>
-                    <option value="Limpeza" {% if categoria_atual == 'Limpeza' %}selected{% endif %}>Limpeza</option>
-                    <option value="Taxas Bancárias" {% if categoria_atual == 'Taxas Bancárias' %}selected{% endif %}>Taxas Bancárias</option>
-                    <option value="Contador" {% if categoria_atual == 'Contador' %}selected{% endif %}>Contador</option>
-                    <option value="Impostos" {% if categoria_atual == 'Impostos' %}selected{% endif %}>Impostos</option>
-                    <option value="Locução" {% if categoria_atual == 'Locução' %}selected{% endif %}>Locução</option>
-                    <option value="Impostos sobre Venda" {% if categoria_atual == 'Impostos sobre Venda' %}selected{% endif %}>Impostos sobre Venda</option>
+            <div class="form-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:6px;">
+                    <label style="margin:0;">Categoria *</label>
+                    <a href="{{ url_for('despesas.listar_categorias') }}" class="btn btn-secondary" style="padding:6px 10px; font-size:12px;">
+                        + Gerenciar
+                    </a>
+                </div>
 
-                    {% if categorias %}
-                        {% for cat in categorias if cat.grupo == 'Operacional' %}
-                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
-                        {% endfor %}
-                    {% endif %}
-                </optgroup>
+                {% set categoria_atual = despesa.categoria if despesa else '' %}
+                {% set ns = namespace(grupo_atual='') %}
 
-                <optgroup label="Entregas">
-                    <option value="Combustível" {% if categoria_atual == 'Combustível' %}selected{% endif %}>Combustível</option>
-                    <option value="Manutenção Moto" {% if categoria_atual == 'Manutenção Moto' %}selected{% endif %}>Manutenção Moto</option>
-                    <option value="Troca de Óleo" {% if categoria_atual == 'Troca de Óleo' %}selected{% endif %}>Troca de Óleo</option>
-                    <option value="Pneus" {% if categoria_atual == 'Pneus' %}selected{% endif %}>Pneus</option>
-                    <option value="Peças" {% if categoria_atual == 'Peças' %}selected{% endif %}>Peças</option>
-                    <option value="Seguro Moto" {% if categoria_atual == 'Seguro Moto' %}selected{% endif %}>Seguro Moto</option>
-                    <option value="Documentação Moto" {% if categoria_atual == 'Documentação Moto' %}selected{% endif %}>Documentação Moto</option>
-                    <option value="Aluguel de Moto" {% if categoria_atual == 'Aluguel de Moto' %}selected{% endif %}>Aluguel de Moto</option>
+                <select name="categoria" required>
+                    <option value="">Selecione a categoria</option>
 
-                    {% if categorias %}
-                        {% for cat in categorias if cat.grupo == 'Entregas' %}
-                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
-                        {% endfor %}
-                    {% endif %}
-                </optgroup>
+                    {% for cat in categorias %}
+                        {% if ns.grupo_atual != cat.grupo %}
+                            {% if not loop.first %}
+                                </optgroup>
+                            {% endif %}
+                            <optgroup label="{{ cat.grupo }}">
+                            {% set ns.grupo_atual = cat.grupo %}
+                        {% endif %}
 
-                <optgroup label="Pessoal">
-                    <option value="Salários" {% if categoria_atual == 'Salários' %}selected{% endif %}>Salários</option>
-                    <option value="Folha de Pagamento" {% if categoria_atual == 'Folha de Pagamento' %}selected{% endif %}>Folha de Pagamento</option>
-                    <option value="Vale Funcionário" {% if categoria_atual == 'Vale Funcionário' %}selected{% endif %}>Vale Funcionário</option>
-                    <option value="Vale Família Lima" {% if categoria_atual == 'Vale Família Lima' %}selected{% endif %}>Vale Família Lima</option>
-                    <option value="Comissão" {% if categoria_atual == 'Comissão' %}selected{% endif %}>Comissão</option>
-                    <option value="Vale Transporte" {% if categoria_atual == 'Vale Transporte' %}selected{% endif %}>Vale Transporte</option>
-                    <option value="Vale Alimentação" {% if categoria_atual == 'Vale Alimentação' %}selected{% endif %}>Vale Alimentação</option>
-                    <option value="Encargos" {% if categoria_atual == 'Encargos' %}selected{% endif %}>Encargos</option>
-                    <option value="INSS" {% if categoria_atual == 'INSS' %}selected{% endif %}>INSS</option>
-                    <option value="FGTS" {% if categoria_atual == 'FGTS' %}selected{% endif %}>FGTS</option>
-                    <option value="Férias" {% if categoria_atual == 'Férias' %}selected{% endif %}>Férias</option>
-                    <option value="13º Salário" {% if categoria_atual == '13º Salário' %}selected{% endif %}>13º Salário</option>
-                    <option value="Treinamento" {% if categoria_atual == 'Treinamento' %}selected{% endif %}>Treinamento</option>
+                        <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>
+                            {{ cat.nome }}
+                        </option>
 
-                    {% if categorias %}
-                        {% for cat in categorias if cat.grupo == 'Pessoal' %}
-                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
-                        {% endfor %}
-                    {% endif %}
-                </optgroup>
+                        {% if loop.last %}
+                            </optgroup>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
 
-                <optgroup label="Estrutura">
-                    <option value="Aluguel" {% if categoria_atual == 'Aluguel' %}selected{% endif %}>Aluguel</option>
-                    <option value="Reforma" {% if categoria_atual == 'Reforma' %}selected{% endif %}>Reforma</option>
-                    <option value="Equipamentos" {% if categoria_atual == 'Equipamentos' %}selected{% endif %}>Equipamentos</option>
-                    <option value="Móveis" {% if categoria_atual == 'Móveis' %}selected{% endif %}>Móveis</option>
-                    <option value="Ar Condicionado" {% if categoria_atual == 'Ar Condicionado' %}selected{% endif %}>Ar Condicionado</option>
-                    <option value="Manutenção Predial" {% if categoria_atual == 'Manutenção Predial' %}selected{% endif %}>Manutenção Predial</option>
-                    <option value="Segurança" {% if categoria_atual == 'Segurança' %}selected{% endif %}>Segurança</option>
-                    <option value="Câmeras / Monitoramento" {% if categoria_atual == 'Câmeras / Monitoramento' %}selected{% endif %}>Câmeras / Monitoramento</option>
+            <div class="form-group full" id="campo_descricao">
+                <label id="label_descricao">Descrição / Detalhe *</label>
+                <input type="text" name="descricao" id="descricao_input"
+                       value="{% if tipo_edicao == 'fixa' %}{{ despesa.nome if despesa else '' }}{% else %}{{ despesa.descricao if despesa else '' }}{% endif %}" required>
+            </div>
 
-                    {% if categorias %}
-                        {% for cat in categorias if cat.grupo == 'Estrutura' %}
-                            <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
-                        {% endfor %}
-                    {% endif %}
-                </optgroup>
+            <div class="form-group">
+                <label>Valor *</label>
+                <input type="text" name="valor" value="{% if tipo_edicao == 'fixa' %}{{ despesa.valor_padrao if despesa else '' }}{% else %}{{ despesa.valor if despesa else '' }}{% endif %}" required>
+            </div>
 
-                {% if categorias %}
-                    {% set outras = categorias | selectattr('grupo', 'equalto', 'Outros') | list %}
-                    {% if outras %}
-                        <optgroup label="Outros">
-                            {% for cat in outras %}
-                                <option value="{{ cat.nome }}" {% if categoria_atual == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
-                            {% endfor %}
-                        </optgroup>
-                    {% endif %}
-                {% endif %}
-            </select>
+            <div class="form-group campo-normal" id="campo_data_despesa">
+                <label>Data da Despesa</label>
+                <input type="date" name="data_despesa" value="{% if tipo_edicao == 'normal' and despesa and despesa.data_despesa %}{{ despesa.data_despesa.strftime('%Y-%m-%d') }}{% endif %}">
+            </div>
+
+            <div class="form-group campo-normal" id="campo_forma_pagamento">
+                <label>Forma de Pagamento</label>
+                <input type="text" name="forma_pagamento" value="{% if tipo_edicao == 'normal' %}{{ despesa.forma_pagamento if despesa else '' }}{% endif %}">
+            </div>
+
+            <div class="form-group campo-fixa" id="campo_dia_vencimento">
+                <label>Dia do Vencimento</label>
+                <input type="number" name="dia_vencimento" min="1" max="31" value="{% if tipo_edicao == 'fixa' %}{{ despesa.dia_vencimento if despesa else '' }}{% endif %}">
+            </div>
+
+            <div class="form-group campo-fixa" id="campo_tipo_valor">
+                <label>Tipo do Valor</label>
+                <select name="tipo_valor">
+                    <option value="">Selecione</option>
+                    <option value="fixa" {% if tipo_edicao == 'fixa' and despesa and despesa.tipo_valor == 'fixa' %}selected{% endif %}>Fixa</option>
+                    <option value="variavel" {% if tipo_edicao == 'fixa' and despesa and despesa.tipo_valor == 'variavel' %}selected{% endif %}>Variável</option>
+                </select>
+            </div>
+
+            <div class="form-group campo-fixa" id="campo_ativa">
+                <label>Status</label>
+                <select name="ativa">
+                    <option value="1" {% if not despesa or (tipo_edicao == 'fixa' and despesa.ativa) %}selected{% endif %}>Ativa</option>
+                    <option value="0" {% if tipo_edicao == 'fixa' and despesa and not despesa.ativa %}selected{% endif %}>Inativa</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {% if not despesa %}
+    <div class="premium-box parcelamento campo-normal" id="box_parcelamento_despesa" style="display:none;">
+        <h3>💳 Parcelamento <span class="premium-badge">Automático</span></h3>
+        <p>Disponível apenas para despesa normal.</p>
+
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Quantidade de Parcelas</label>
+                <select name="parcelas" id="parcelas" onchange="alternarCamposDespesa()">
+                    {% for i in range(1, 13) %}
+                        <option value="{{ i }}" {% if i == 1 %}selected{% endif %}>{{ i }}x</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" id="campo_primeira_parcela" style="display:none;">
+                <label>Primeira Data da Parcela</label>
+                <input type="date" name="primeira_data_parcela">
+            </div>
         </div>
 
-        <div class="form-group full" id="campo_descricao">
-            <label id="label_descricao">Descrição / Detalhe *</label>
-            <input type="text" name="descricao" id="descricao_input" value="{% if tipo_edicao == 'fixa' %}{{ despesa.nome if despesa else '' }}{% else %}{{ despesa.descricao if despesa else '' }}{% endif %}" required>
+        <div class="helper-text">
+            O sistema cria automaticamente as parcelas mensais.
         </div>
+    </div>
+    {% endif %}
 
-        <div class="form-group">
-            <label>Valor *</label>
-            <input type="text" name="valor" value="{% if tipo_edicao == 'fixa' %}{{ despesa.valor_padrao if despesa else '' }}{% else %}{{ despesa.valor if despesa else '' }}{% endif %}" required>
+    <div class="premium-box">
+        <h3>📝 Observações</h3>
+        <div class="form-grid two-columns">
+            <div class="form-group full">
+                <label>Observação</label>
+                <textarea name="observacao" rows="4">{% if despesa %}{{ despesa.observacao if despesa.observacao else '' }}{% endif %}</textarea>
+            </div>
         </div>
+    </div>
 
-        <div class="form-group campo-normal" id="campo_data_despesa">
-            <label>Data da Despesa</label>
-            <input type="date" name="data_despesa" value="{% if tipo_edicao == 'normal' and despesa and despesa.data_despesa %}{{ despesa.data_despesa.strftime('%Y-%m-%d') }}{% endif %}">
-        </div>
-
-        <div class="form-group campo-normal" id="campo_forma_pagamento">
-            <label>Forma de Pagamento</label>
-            <input type="text" name="forma_pagamento" value="{% if tipo_edicao == 'normal' %}{{ despesa.forma_pagamento if despesa else '' }}{% endif %}">
-        </div>
-
-        <div class="form-group campo-fixa" id="campo_dia_vencimento">
-            <label>Dia do Vencimento</label>
-            <input type="number" name="dia_vencimento" min="1" max="31" value="{% if tipo_edicao == 'fixa' %}{{ despesa.dia_vencimento if despesa else '' }}{% endif %}">
-        </div>
-
-        <div class="form-group campo-fixa" id="campo_tipo_valor">
-            <label>Tipo do Valor</label>
-            <select name="tipo_valor">
-                <option value="">Selecione</option>
-                <option value="fixa" {% if tipo_edicao == 'fixa' and despesa and despesa.tipo_valor == 'fixa' %}selected{% endif %}>Fixa</option>
-                <option value="variavel" {% if tipo_edicao == 'fixa' and despesa and despesa.tipo_valor == 'variavel' %}selected{% endif %}>Variável</option>
-            </select>
-        </div>
-
-        <div class="form-group campo-fixa" id="campo_ativa">
-            <label>Status</label>
-            <select name="ativa">
-                <option value="1" {% if not despesa or (tipo_edicao == 'fixa' and despesa.ativa) %}selected{% endif %}>Ativa</option>
-                <option value="0" {% if tipo_edicao == 'fixa' and despesa and not despesa.ativa %}selected{% endif %}>Inativa</option>
-            </select>
-        </div>
-
-        <div class="form-group full">
-            <label>Observação</label>
-            <textarea name="observacao" rows="4">{% if tipo_edicao == 'fixa' %}{{ despesa.observacao if despesa else '' }}{% else %}{{ despesa.observacao if despesa else '' }}{% endif %}</textarea>
-        </div>
-
-        <div class="form-actions full">
-            <button type="submit" class="btn btn-primary">
-                {% if despesa %}Salvar Alterações{% else %}Salvar Despesa{% endif %}
-            </button>
-            <a href="{{ url_for('despesas.listar_despesas') }}" class="btn btn-secondary">Voltar</a>
-        </div>
-    </form>
-</div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            {% if despesa %}Salvar Alterações{% else %}Salvar Despesa{% endif %}
+        </button>
+        <a href="{{ url_for('despesas.listar_despesas') }}" class="btn btn-secondary">Voltar</a>
+    </div>
+</form>
 
 <script>
 function alternarCamposDespesa() {
@@ -207,18 +298,27 @@ function alternarCamposDespesa() {
     const camposNormais = document.querySelectorAll('.campo-normal');
     const camposFixos = document.querySelectorAll('.campo-fixa');
     const labelDescricao = document.getElementById('label_descricao');
+    const parcelas = document.getElementById('parcelas');
+    const campoPrimeiraParcela = document.getElementById('campo_primeira_parcela');
+    const boxParcelamento = document.getElementById('box_parcelamento_despesa');
 
     if (tipo === 'fixa') {
         camposNormais.forEach(el => el.style.display = 'none');
-        camposFixos.forEach(el => el.style.display = 'flex');
-        if (labelDescricao) {
-            labelDescricao.textContent = 'Nome da Despesa Fixa *';
-        }
+        camposFixos.forEach(el => el.style.display = 'block');
+        if (labelDescricao) labelDescricao.textContent = 'Nome da Despesa Fixa *';
+        if (boxParcelamento) boxParcelamento.style.display = 'none';
     } else {
-        camposNormais.forEach(el => el.style.display = 'flex');
+        camposNormais.forEach(el => {
+            if (el.id !== 'box_parcelamento_despesa') {
+                el.style.display = 'block';
+            }
+        });
         camposFixos.forEach(el => el.style.display = 'none');
-        if (labelDescricao) {
-            labelDescricao.textContent = 'Descrição / Detalhe *';
+        if (labelDescricao) labelDescricao.textContent = 'Descrição / Detalhe *';
+        if (boxParcelamento) boxParcelamento.style.display = 'block';
+
+        if (parcelas && campoPrimeiraParcela) {
+            campoPrimeiraParcela.style.display = parseInt(parcelas.value) > 1 ? 'block' : 'none';
         }
     }
 }

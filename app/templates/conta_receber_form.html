@@ -1,84 +1,246 @@
 {% extends "base.html" %}
 
 {% block title %}
-    {% if conta %}Editar Conta{% else %}Nova Conta{% endif %}
+    {% if conta %}Editar Conta{% else %}Nova Conta{% endif %} | Financeiro Farm
 {% endblock %}
 
 {% block content %}
+<style>
+.form-shell {
+    display: grid;
+    gap: 18px;
+}
 
-<div class="page-top">
-    <h1 class="page-title">
-        {% if conta %}Editar Conta a Receber{% else %}Nova Conta a Receber{% endif %}
-    </h1>
+.premium-box {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.premium-box h3 {
+    margin: 0 0 14px 0;
+    font-size: 17px;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.premium-box p {
+    margin: -4px 0 16px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.premium-box.parcelamento {
+    background: linear-gradient(135deg, #ecfeff, #f0fdfa);
+    border-left: 6px solid #0f766e;
+}
+
+.premium-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #ccfbf1;
+    color: #0f766e;
+    margin-left: 8px;
+}
+
+.page-header-premium {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.page-header-premium h1 {
+    margin: 0;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.page-header-premium p {
+    margin: 6px 0 0 0;
+    color: #64748b;
+}
+
+.form-grid.two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    border: 1px solid #dbe2ea;
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #0f766e;
+    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.08);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.helper-text {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+    .form-grid.two-columns {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="page-header-premium">
+    <div>
+        <h1>{% if conta %}Editar Conta a Receber{% else %}Nova Conta a Receber{% endif %}</h1>
+        <p>Cadastro profissional de contas a receber com parcelamento automático</p>
+    </div>
 </div>
 
-<div class="form-card">
-    <form method="POST" class="form-grid two-columns">
+<form method="POST" class="form-shell">
+    <div class="premium-box">
+        <h3>🧾 Dados da cobrança</h3>
+        <p>Informe os dados principais da conta a receber.</p>
 
-        <div class="form-group">
-            <label>Farmácia *</label>
-            <select name="farmacia_id" required>
-                <option value="">Selecione</option>
-                {% for f in farmacias %}
-                    <option value="{{ f.id }}"
-                        {% if conta and conta.farmacia_id == f.id %}selected{% endif %}>
-                        {{ f.nome_fantasia }}
-                    </option>
-                {% endfor %}
-            </select>
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Farmácia *</label>
+                <select name="farmacia_id" required>
+                    <option value="">Selecione</option>
+                    {% for f in farmacias %}
+                        <option value="{{ f.id }}" {% if conta and conta.farmacia_id == f.id %}selected{% endif %}>
+                            {{ f.nome_fantasia }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Cliente *</label>
+                <input type="text" name="cliente_nome" required value="{{ conta.cliente_nome if conta else '' }}">
+            </div>
+
+            <div class="form-group full">
+                <label>Descrição</label>
+                <input type="text" name="descricao" value="{{ conta.descricao if conta else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Valor *</label>
+                <input type="text" name="valor" required value="{{ conta.valor if conta else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Data Vencimento *</label>
+                <input type="date" name="data_vencimento" required value="{{ conta.data_vencimento.strftime('%Y-%m-%d') if conta and conta.data_vencimento else '' }}">
+            </div>
+        </div>
+    </div>
+
+    {% if not conta %}
+    <div class="premium-box parcelamento">
+        <h3>💰 Parcelamento <span class="premium-badge">Automático</span></h3>
+        <p>O sistema divide o valor e gera todas as parcelas a receber.</p>
+
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Quantidade de Parcelas</label>
+                <select name="parcelas" id="parcelas" onchange="alternarParcelamentoReceber()">
+                    {% for i in range(1, 13) %}
+                        <option value="{{ i }}" {% if i == 1 %}selected{% endif %}>{{ i }}x</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" id="grupo_primeira_parcela_receber" style="display:none;">
+                <label>Primeira Data da Parcela</label>
+                <input type="date" name="primeira_data_parcela">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Cliente *</label>
-            <input type="text" name="cliente_nome" required
-                   value="{{ conta.cliente_nome if conta else '' }}">
+        <div class="helper-text">
+            Exemplo: R$ 3.000,00 em 3x cria 3 lançamentos mensais.
         </div>
+    </div>
+    {% endif %}
 
-        <div class="form-group full">
-            <label>Descrição</label>
-            <input type="text" name="descricao"
-                   value="{{ conta.descricao if conta else '' }}">
+    <div class="premium-box">
+        <h3>✔ Recebimento</h3>
+        <p>Preencha apenas se a conta já tiver sido recebida.</p>
+
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Data Recebimento</label>
+                <input type="date" name="data_recebimento" value="{{ conta.data_recebimento.strftime('%Y-%m-%d') if conta and conta.data_recebimento else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Valor Recebido</label>
+                <input type="text" name="valor_recebido" value="{{ conta.valor_recebido if conta else '' }}">
+            </div>
+
+            <div class="form-group full">
+                <label>Observação</label>
+                <textarea name="observacao" rows="4">{{ conta.observacao if conta else '' }}</textarea>
+            </div>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label>Valor *</label>
-            <input type="text" name="valor" required
-                   value="{{ conta.valor if conta else '' }}">
-        </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            {% if conta %}Salvar Alterações{% else %}Salvar{% endif %}
+        </button>
+        <a href="{{ url_for('contas_receber.listar_contas_receber') }}" class="btn btn-secondary">Voltar</a>
+    </div>
+</form>
 
-        <div class="form-group">
-            <label>Data Vencimento *</label>
-            <input type="date" name="data_vencimento" required
-                   value="{{ conta.data_vencimento.strftime('%Y-%m-%d') if conta and conta.data_vencimento else '' }}">
-        </div>
+<script>
+function alternarParcelamentoReceber() {
+    const parcelas = document.getElementById('parcelas');
+    const grupo = document.getElementById('grupo_primeira_parcela_receber');
 
-        <div class="form-group">
-            <label>Data Recebimento</label>
-            <input type="date" name="data_recebimento"
-                   value="{{ conta.data_recebimento.strftime('%Y-%m-%d') if conta and conta.data_recebimento else '' }}">
-        </div>
+    if (!parcelas || !grupo) return;
+    grupo.style.display = parseInt(parcelas.value) > 1 ? 'block' : 'none';
+}
 
-        <div class="form-group">
-            <label>Valor Recebido</label>
-            <input type="text" name="valor_recebido"
-                   value="{{ conta.valor_recebido if conta else '' }}">
-        </div>
-
-        <div class="form-group full">
-            <label>Observação</label>
-            <textarea name="observacao" rows="3">{{ conta.observacao if conta else '' }}</textarea>
-        </div>
-
-        <div class="form-actions full">
-            <button type="submit" class="btn btn-primary">
-                {% if conta %}Salvar Alterações{% else %}Salvar{% endif %}
-            </button>
-
-            <a href="{{ url_for('contas_receber.listar_contas_receber') }}"
-               class="btn btn-secondary">Voltar</a>
-        </div>
-
-    </form>
-</div>
-
+document.addEventListener('DOMContentLoaded', function () {
+    alternarParcelamentoReceber();
+});
+</script>
 {% endblock %}

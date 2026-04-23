@@ -1,4 +1,5 @@
 from datetime import datetime
+from calendar import monthrange
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
@@ -30,6 +31,20 @@ def categorias_ativas():
         CategoriaDespesa.grupo.asc(),
         CategoriaDespesa.nome.asc()
     ).all()
+
+
+def adicionar_mes(data_base, meses):
+    mes = data_base.month - 1 + meses
+    ano = data_base.year + mes // 12
+    mes = mes % 12 + 1
+    dia = min(data_base.day, monthrange(ano, mes)[1])
+    return datetime(ano, mes, dia).date()
+
+
+def gerar_nome_parcela(texto, numero, total):
+    if total <= 1:
+        return texto
+    return f"{texto} ({numero}/{total})"
 
 
 @despesas_bp.route("/")
@@ -246,6 +261,9 @@ def nova_despesa():
         valor = request.form.get("valor", "0").replace(",", ".")
         observacao = request.form.get("observacao", "").strip()
 
+        parcelas = request.form.get("parcelas", type=int) or 1
+        primeira_data_parcela = request.form.get("primeira_data_parcela", "").strip()
+
         if not tipo_despesa or not farmacia_id or not categoria or not descricao:
             flash("Preencha os campos obrigatórios.", "danger")
             return render_template(
@@ -254,6 +272,9 @@ def nova_despesa():
                 categorias=categorias,
                 despesa=None
             )
+
+        if parcelas < 1:
+            parcelas = 1
 
         if not usuario_tem_acesso_farmacia(current_user, farmacia_id):
             flash("Você não tem acesso a essa farmácia.", "danger")
@@ -272,16 +293,30 @@ def nova_despesa():
                     despesa=None
                 )
 
-            despesa = Despesa(
-                farmacia_id=farmacia_id,
-                categoria=categoria,
-                descricao=descricao,
-                valor=float(valor or 0),
-                data_despesa=datetime.strptime(data_despesa, "%Y-%m-%d").date(),
-                forma_pagamento=forma_pagamento,
-                observacao=observacao
-            )
-            db.session.add(despesa)
+            valor_total_digitado = float(valor or 0)
+            valor_parcela = round(valor_total_digitado / parcelas, 2)
+            diferenca = round(valor_total_digitado - (valor_parcela * parcelas), 2)
+
+            data_base = datetime.strptime(
+                primeira_data_parcela if primeira_data_parcela else data_despesa,
+                "%Y-%m-%d"
+            ).date()
+
+            for i in range(parcelas):
+                valor_atual = valor_parcela
+                if i == parcelas - 1:
+                    valor_atual = round(valor_atual + diferenca, 2)
+
+                despesa = Despesa(
+                    farmacia_id=farmacia_id,
+                    categoria=categoria,
+                    descricao=gerar_nome_parcela(descricao, i + 1, parcelas),
+                    valor=float(valor_atual),
+                    data_despesa=adicionar_mes(data_base, i),
+                    forma_pagamento=forma_pagamento,
+                    observacao=observacao
+                )
+                db.session.add(despesa)
 
         elif tipo_despesa == "fixa":
             dia_vencimento = request.form.get("dia_vencimento", type=int)
@@ -320,7 +355,11 @@ def nova_despesa():
 
         db.session.commit()
 
-        flash("Despesa salva com sucesso.", "success")
+        if tipo_despesa == "normal" and parcelas > 1:
+            flash("Despesas parceladas salvas com sucesso.", "success")
+        else:
+            flash("Despesa salva com sucesso.", "success")
+
         return redirect(url_for("despesas.listar_despesas"))
 
     return render_template(

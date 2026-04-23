@@ -1,23 +1,152 @@
 {% extends "base.html" %}
 
-{% block title %}Contas a Receber{% endblock %}
+{% block title %}Contas a Receber | Financeiro Farm{% endblock %}
 
 {% block content %}
+<style>
+.premium-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
 
-<div class="page-top">
+.premium-top h1 {
+    margin: 0;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.premium-top p {
+    margin: 6px 0 0 0;
+    color: #64748b;
+}
+
+.premium-filter {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    margin-bottom: 18px;
+}
+
+.premium-table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+
+.premium-table-wrap {
+    overflow-x: auto;
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.premium-table thead th {
+    background: #0f172a;
+    color: #fff;
+    text-align: left;
+    padding: 14px 12px;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.premium-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 13px;
+    color: #334155;
+    vertical-align: top;
+}
+
+.premium-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.cliente-cell strong {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.cliente-cell small {
+    display: block;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.badge-soft {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge-soft.purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.badge-soft.green {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-soft.red {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.badge-soft.yellow {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 170px;
+}
+
+.receive-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #f8fafc;
+    padding: 10px;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+}
+
+.money-strong {
+    font-weight: 800;
+    color: #0f172a;
+}
+</style>
+
+<div class="premium-top">
     <div>
-        <h1 class="page-title">Contas a Receber</h1>
-        <p class="page-subtitle">Controle de boletos a receber</p>
+        <h1>Contas a Receber</h1>
+        <p>Controle premium de recebimentos, vencidos, recebidos e parcelados</p>
     </div>
 
-    <a href="{{ url_for('contas_receber.nova_conta_receber') }}" class="btn btn-primary">
-        + Nova Conta
-    </a>
+    <a href="{{ url_for('contas_receber.nova_conta_receber') }}" class="btn btn-primary">+ Nova Conta</a>
 </div>
 
-<div class="form-card" style="margin-bottom:20px;">
+<div class="premium-filter">
     <form method="GET" class="form-grid two-columns">
-
         <div class="form-group">
             <label>Farmácia</label>
             <select name="farmacia_id">
@@ -44,69 +173,79 @@
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="{{ url_for('contas_receber.listar_contas_receber') }}" class="btn btn-secondary">Limpar</a>
         </div>
-
     </form>
 </div>
 
-<div class="table-card">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Cliente</th>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Vencimento</th>
-                <th>Status</th>
-                <th style="width:260px;">Ações</th>
-            </tr>
-        </thead>
+<div class="premium-table-card">
+    <div class="premium-table-wrap">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>Cliente / Descrição</th>
+                    <th>Valor</th>
+                    <th>Vencimento</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
 
-        <tbody>
-        {% for c in contas %}
-            <tr>
-                <td><strong>{{ c.cliente_nome }}</strong></td>
-                <td>{{ c.descricao or '-' }}</td>
-                <td>R$ {{ "%.2f"|format(c.valor) }}</td>
-                <td>{{ c.data_vencimento.strftime('%d/%m/%Y') }}</td>
+            <tbody>
+            {% for c in contas %}
+                {% set parcelado = '(' in c.cliente_nome and '/' in c.cliente_nome %}
+                <tr>
+                    <td class="cliente-cell">
+                        <strong>{{ c.cliente_nome }}</strong>
+                        <small>{{ c.descricao or '-' }}</small>
 
-                <td>
-                    {% if c.status == 'recebido' %}
-                        <span class="badge badge-success">Recebido</span>
-                    {% elif c.status == 'vencido' %}
-                        <span class="badge badge-danger">Vencido</span>
-                    {% else %}
-                        <span class="badge badge-warning">A Receber</span>
-                    {% endif %}
-                </td>
+                        {% if parcelado %}
+                            <div style="margin-top:6px;">
+                                <span class="badge-soft purple">Parcelado</span>
+                            </div>
+                        {% endif %}
+                    </td>
 
-                <td style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <td class="money-strong">R$ {{ "%.2f"|format(c.valor) }}</td>
+                    <td>{{ c.data_vencimento.strftime('%d/%m/%Y') }}</td>
 
-                    {% if c.status != 'recebido' %}
-                    <form method="POST" action="{{ url_for('contas_receber.receber_conta', conta_id=c.id) }}">
-                        <input type="date" name="data_recebimento" required style="width:120px;">
-                        <input type="text" name="valor_recebido" placeholder="Valor" style="width:80px;">
-                        <button type="submit" class="btn btn-success btn-sm">Receber</button>
-                    </form>
-                    {% endif %}
+                    <td>
+                        {% if c.status == 'recebido' %}
+                            <span class="badge-soft green">Recebido</span>
+                        {% elif c.status == 'vencido' %}
+                            <span class="badge-soft red">Vencido</span>
+                        {% else %}
+                            <span class="badge-soft yellow">A Receber</span>
+                        {% endif %}
+                    </td>
 
-                    <a href="{{ url_for('contas_receber.editar_conta_receber', conta_id=c.id) }}"
-                       class="btn btn-secondary btn-sm">Editar</a>
+                    <td>
+                        <div class="actions-stack">
+                            {% if c.status != 'recebido' %}
+                            <form method="POST" action="{{ url_for('contas_receber.receber_conta', conta_id=c.id) }}" class="receive-box">
+                                <input type="date" name="data_recebimento" required>
+                                <input type="text" name="valor_recebido" placeholder="Valor">
+                                <button type="submit" class="btn btn-success btn-sm">Receber</button>
+                            </form>
+                            {% endif %}
 
-                    <form method="POST"
-                          action="{{ url_for('contas_receber.excluir_conta_receber', conta_id=c.id) }}"
-                          onsubmit="return confirm('Deseja excluir?');">
-                        <button class="btn btn-danger btn-sm">Excluir</button>
-                    </form>
+                            <a href="{{ url_for('contas_receber.editar_conta_receber', conta_id=c.id) }}"
+                               class="btn btn-secondary btn-sm">Editar</a>
 
-                </td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="6">Nenhuma conta encontrada.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                            <form method="POST"
+                                  action="{{ url_for('contas_receber.excluir_conta_receber', conta_id=c.id) }}"
+                                  onsubmit="return confirm('Deseja excluir?');">
+                                <button class="btn btn-danger btn-sm">Excluir</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5">Nenhuma conta encontrada.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 {% endblock %}

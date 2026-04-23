@@ -1,4 +1,5 @@
 from datetime import datetime
+from calendar import monthrange
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
@@ -22,6 +23,20 @@ def farmacias_do_usuario(usuario):
 
 def usuario_tem_acesso_farmacia(usuario, farmacia_id):
     return any(f.id == farmacia_id for f in farmacias_do_usuario(usuario))
+
+
+def adicionar_mes(data_base, meses):
+    mes = data_base.month - 1 + meses
+    ano = data_base.year + mes // 12
+    mes = mes % 12 + 1
+    dia = min(data_base.day, monthrange(ano, mes)[1])
+    return datetime(ano, mes, dia).date()
+
+
+def gerar_nome_parcela(texto, numero, total):
+    if total <= 1:
+        return texto
+    return f"{texto} ({numero}/{total})"
 
 
 @contas_receber_bp.route("/")
@@ -75,51 +90,74 @@ def nova_conta_receber():
         valor_recebido = request.form.get("valor_recebido", "").replace(",", ".").strip()
         observacao = request.form.get("observacao", "").strip()
 
+        parcelas = request.form.get("parcelas", type=int) or 1
+        primeira_data_parcela = request.form.get("primeira_data_parcela", "").strip()
+
         if not farmacia_id or not cliente_nome or not data_vencimento:
             flash("Preencha os campos obrigatórios.", "danger")
             return render_template("conta_receber_form.html", farmacias=farmacias, conta=None)
+
+        if parcelas < 1:
+            parcelas = 1
 
         if not usuario_tem_acesso_farmacia(current_user, farmacia_id):
             flash("Você não tem acesso a essa farmácia.", "danger")
             return redirect(url_for("contas_receber.listar_contas_receber"))
 
-        conta = ContaReceber(
-            farmacia_id=farmacia_id,
-            cliente_nome=cliente_nome,
-            descricao=descricao,
-            valor=float(valor or 0),
-            data_vencimento=datetime.strptime(data_vencimento, "%Y-%m-%d").date(),
-            observacao=observacao
-        )
+        valor_total_digitado = float(valor or 0)
+        valor_parcela = round(valor_total_digitado / parcelas, 2)
+        diferenca = round(valor_total_digitado - (valor_parcela * parcelas), 2)
 
-        if data_recebimento:
-            conta.data_recebimento = datetime.strptime(data_recebimento, "%Y-%m-%d").date()
+        data_base = datetime.strptime(
+            primeira_data_parcela if primeira_data_parcela else data_vencimento,
+            "%Y-%m-%d"
+        ).date()
 
-        if valor_recebido:
-            conta.valor_recebido = float(valor_recebido)
+        for i in range(parcelas):
+            valor_atual = valor_parcela
+            if i == parcelas - 1:
+                valor_atual = round(valor_atual + diferenca, 2)
 
-        conta.preparar()
-
-        db.session.add(conta)
-        db.session.flush()
-
-        if conta.status == "recebido":
-            db.session.add(
-                MovimentoCaixa(
-                    farmacia_id=conta.farmacia_id,
-                    tipo="entrada",
-                    categoria="Conta a Receber",
-                    descricao=f"Recebimento: {conta.cliente_nome}",
-                    valor=conta.valor_recebido if conta.valor_recebido is not None else conta.valor,
-                    data_movimento=conta.data_recebimento,
-                    origem="receber",
-                    observacao=conta.descricao
-                )
+            conta = ContaReceber(
+                farmacia_id=farmacia_id,
+                cliente_nome=gerar_nome_parcela(cliente_nome, i + 1, parcelas),
+                descricao=descricao,
+                valor=float(valor_atual),
+                data_vencimento=adicionar_mes(data_base, i),
+                observacao=observacao
             )
+
+            if parcelas == 1 and data_recebimento:
+                conta.data_recebimento = datetime.strptime(data_recebimento, "%Y-%m-%d").date()
+
+            if parcelas == 1 and valor_recebido:
+                conta.valor_recebido = float(valor_recebido)
+
+            conta.preparar()
+            db.session.add(conta)
+            db.session.flush()
+
+            if conta.status == "recebido":
+                db.session.add(
+                    MovimentoCaixa(
+                        farmacia_id=conta.farmacia_id,
+                        tipo="entrada",
+                        categoria="Conta a Receber",
+                        descricao=f"Recebimento: {conta.cliente_nome}",
+                        valor=conta.valor_recebido if conta.valor_recebido is not None else conta.valor,
+                        data_movimento=conta.data_recebimento,
+                        origem="receber",
+                        observacao=conta.descricao
+                    )
+                )
 
         db.session.commit()
 
-        flash("Conta a receber cadastrada com sucesso.", "success")
+        if parcelas > 1:
+            flash("Contas parceladas cadastradas com sucesso.", "success")
+        else:
+            flash("Conta a receber cadastrada com sucesso.", "success")
+
         return redirect(url_for("contas_receber.listar_contas_receber"))
 
     return render_template("conta_receber_form.html", farmacias=farmacias, conta=None)

@@ -77,36 +77,71 @@ def aplicar_filtro_periodo_lista(lista, campo_data, data_inicio=None, data_fim=N
     return resultado
 
 
-def build_pdf_resumo(titulo, periodo, resumo, nome_arquivo):
+def moeda(valor):
+    return f"R$ {float(valor or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def texto_data(valor):
+    return valor.strftime("%d/%m/%Y") if valor else "-"
+
+
+def build_pdf_detalhado(titulo, periodo, secoes, nome_arquivo):
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(A4),
-        leftMargin=25,
-        rightMargin=25,
-        topMargin=25,
-        bottomMargin=25
+        leftMargin=20,
+        rightMargin=20,
+        topMargin=20,
+        bottomMargin=20
     )
 
     styles = getSampleStyleSheet()
     elementos = []
 
     elementos.append(Paragraph(titulo, styles["Title"]))
-    elementos.append(Spacer(1, 12))
+    elementos.append(Spacer(1, 10))
     elementos.append(Paragraph(periodo, styles["Normal"]))
-    elementos.append(Spacer(1, 12))
+    elementos.append(Spacer(1, 16))
 
-    tabela = Table(resumo, colWidths=[320, 220])
-    tabela.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
-        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-    ]))
+    for secao in secoes:
+        elementos.append(Paragraph(secao["titulo"], styles["Heading2"]))
+        elementos.append(Spacer(1, 8))
 
-    elementos.append(tabela)
+        tabela_dados = [secao["cabecalho"]] + secao["linhas"]
+
+        tabela = Table(tabela_dados, repeatRows=1)
+        tabela.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ]))
+
+        elementos.append(tabela)
+        elementos.append(Spacer(1, 8))
+
+        if secao.get("resumo"):
+            resumo_tabela = Table(
+                [["Resumo", "Valor"]] + secao["resumo"],
+                colWidths=[220, 140]
+            )
+            resumo_tabela.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8fafc")),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ]))
+            elementos.append(resumo_tabela)
+
+        elementos.append(Spacer(1, 18))
+
     doc.build(elementos)
     buffer.seek(0)
 
@@ -129,54 +164,44 @@ def relatorio_financeiro_pdf():
         flash("Nenhuma farmácia encontrada para gerar relatório.", "danger")
         return redirect(url_for("dashboard.dashboard"))
 
-    boletos_query = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids))
-    despesas_query = Despesa.query.filter(Despesa.farmacia_id.in_(farmacia_ids))
-    vendas_query = VendaDiaria.query.filter(VendaDiaria.farmacia_id.in_(farmacia_ids))
-    despesas_motos_query = DespesaMoto.query.filter(DespesaMoto.farmacia_id.in_(farmacia_ids))
+    boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
+    despesas = Despesa.query.filter(Despesa.farmacia_id.in_(farmacia_ids)).all()
+    vendas = VendaDiaria.query.filter(VendaDiaria.farmacia_id.in_(farmacia_ids)).all()
+    despesas_motos = DespesaMoto.query.filter(DespesaMoto.farmacia_id.in_(farmacia_ids)).all()
 
-    if data_inicio:
-        boletos_query = boletos_query.filter(Boleto.data_vencimento >= data_inicio)
-        despesas_query = despesas_query.filter(Despesa.data_despesa >= data_inicio)
-        vendas_query = vendas_query.filter(VendaDiaria.data_venda >= data_inicio)
-        despesas_motos_query = despesas_motos_query.filter(DespesaMoto.data_despesa >= data_inicio)
-
-    if data_fim:
-        boletos_query = boletos_query.filter(Boleto.data_vencimento <= data_fim)
-        despesas_query = despesas_query.filter(Despesa.data_despesa <= data_fim)
-        vendas_query = vendas_query.filter(VendaDiaria.data_venda <= data_fim)
-        despesas_motos_query = despesas_motos_query.filter(DespesaMoto.data_despesa <= data_fim)
-
-    boletos = boletos_query.all()
-    despesas = despesas_query.all()
-    vendas = vendas_query.all()
-    despesas_motos = despesas_motos_query.all()
+    boletos = aplicar_filtro_periodo_lista(boletos, "data_vencimento", data_inicio, data_fim)
+    despesas = aplicar_filtro_periodo_lista(despesas, "data_despesa", data_inicio, data_fim)
+    vendas = aplicar_filtro_periodo_lista(vendas, "data_venda", data_inicio, data_fim)
+    despesas_motos = aplicar_filtro_periodo_lista(despesas_motos, "data_despesa", data_inicio, data_fim)
 
     for boleto in boletos:
         boleto.preparar()
 
     total_boletos_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
     total_boletos_abertos = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
-    total_despesas = sum(d.valor for d in despesas)
-    total_despesas_motos = sum(d.valor for d in despesas_motos)
-    total_vendas = sum(v.total_dia for v in vendas)
+    total_despesas = sum(d.valor or 0 for d in despesas)
+    total_despesas_motos = sum(d.valor or 0 for d in despesas_motos)
+    total_vendas = sum(v.total_dia or 0 for v in vendas)
     resultado = total_vendas - (total_despesas + total_despesas_motos)
 
-    periodo = formatar_periodo(data_inicio, data_fim)
-
-    resumo = [
-        ["Indicador", "Valor"],
-        ["Total de Boletos Pagos", f"R$ {total_boletos_pagos:,.2f}"],
-        ["Total de Boletos em Aberto", f"R$ {total_boletos_abertos:,.2f}"],
-        ["Total de Despesas Gerais", f"R$ {total_despesas:,.2f}"],
-        ["Total de Despesas das Motos", f"R$ {total_despesas_motos:,.2f}"],
-        ["Total de Vendas", f"R$ {total_vendas:,.2f}"],
-        ["Resultado Financeiro", f"R$ {resultado:,.2f}"],
+    linhas = [
+        ["Boletos Pagos", moeda(total_boletos_pagos)],
+        ["Boletos em Aberto", moeda(total_boletos_abertos)],
+        ["Despesas Gerais", moeda(total_despesas)],
+        ["Despesas das Motos", moeda(total_despesas_motos)],
+        ["Vendas", moeda(total_vendas)],
+        ["Resultado Financeiro", moeda(resultado)],
     ]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório Financeiro - Financeiro Farm",
-        periodo,
-        resumo,
+        formatar_periodo(data_inicio, data_fim),
+        [{
+            "titulo": "Resumo Geral",
+            "cabecalho": ["Indicador", "Valor"],
+            "linhas": linhas,
+            "resumo": []
+        }],
         "relatorio_financeiro.pdf"
     )
 
@@ -192,27 +217,15 @@ def relatorio_financeiro_excel():
         flash("Nenhuma farmácia encontrada para gerar relatório.", "danger")
         return redirect(url_for("dashboard.dashboard"))
 
-    boletos_query = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids))
-    despesas_query = Despesa.query.filter(Despesa.farmacia_id.in_(farmacia_ids))
-    vendas_query = VendaDiaria.query.filter(VendaDiaria.farmacia_id.in_(farmacia_ids))
-    despesas_motos_query = DespesaMoto.query.filter(DespesaMoto.farmacia_id.in_(farmacia_ids))
+    boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
+    despesas = Despesa.query.filter(Despesa.farmacia_id.in_(farmacia_ids)).all()
+    vendas = VendaDiaria.query.filter(VendaDiaria.farmacia_id.in_(farmacia_ids)).all()
+    despesas_motos = DespesaMoto.query.filter(DespesaMoto.farmacia_id.in_(farmacia_ids)).all()
 
-    if data_inicio:
-        boletos_query = boletos_query.filter(Boleto.data_vencimento >= data_inicio)
-        despesas_query = despesas_query.filter(Despesa.data_despesa >= data_inicio)
-        vendas_query = vendas_query.filter(VendaDiaria.data_venda >= data_inicio)
-        despesas_motos_query = despesas_motos_query.filter(DespesaMoto.data_despesa >= data_inicio)
-
-    if data_fim:
-        boletos_query = boletos_query.filter(Boleto.data_vencimento <= data_fim)
-        despesas_query = despesas_query.filter(Despesa.data_despesa <= data_fim)
-        vendas_query = vendas_query.filter(VendaDiaria.data_venda <= data_fim)
-        despesas_motos_query = despesas_motos_query.filter(DespesaMoto.data_despesa <= data_fim)
-
-    boletos = boletos_query.all()
-    despesas = despesas_query.all()
-    vendas = vendas_query.all()
-    despesas_motos = despesas_motos_query.all()
+    boletos = aplicar_filtro_periodo_lista(boletos, "data_vencimento", data_inicio, data_fim)
+    despesas = aplicar_filtro_periodo_lista(despesas, "data_despesa", data_inicio, data_fim)
+    vendas = aplicar_filtro_periodo_lista(vendas, "data_venda", data_inicio, data_fim)
+    despesas_motos = aplicar_filtro_periodo_lista(despesas_motos, "data_despesa", data_inicio, data_fim)
 
     for boleto in boletos:
         boleto.preparar()
@@ -224,10 +237,13 @@ def relatorio_financeiro_excel():
     ws.append(["Indicador", "Valor"])
     ws.append(["Boletos Pagos", sum((b.valor_pago or 0) for b in boletos if b.status == "pago")])
     ws.append(["Boletos em Aberto", sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])])
-    ws.append(["Despesas Gerais", sum(d.valor for d in despesas)])
-    ws.append(["Despesas das Motos", sum(d.valor for d in despesas_motos)])
-    ws.append(["Vendas", sum(v.total_dia for v in vendas)])
-    ws.append(["Resultado", sum(v.total_dia for v in vendas) - (sum(d.valor for d in despesas) + sum(d.valor for d in despesas_motos))])
+    ws.append(["Despesas Gerais", sum(d.valor or 0 for d in despesas)])
+    ws.append(["Despesas das Motos", sum(d.valor or 0 for d in despesas_motos)])
+    ws.append(["Vendas", sum(v.total_dia or 0 for v in vendas)])
+    ws.append([
+        "Resultado",
+        sum(v.total_dia or 0 for v in vendas) - (sum(d.valor or 0 for d in despesas) + sum(d.valor or 0 for d in despesas_motos))
+    ])
 
     ws.column_dimensions["A"].width = 35
     ws.column_dimensions["B"].width = 20
@@ -276,19 +292,103 @@ def relatorio_financeiro_completo():
     for c in contas:
         c.preparar()
 
-    total_vendas = sum(v.total_dia for v in vendas)
-    total_despesas = sum(d.valor for d in despesas)
-    total_motos = sum(d.valor for d in despesas_motos)
-    total_fixas = sum(d.valor for d in despesas_fixas)
+    for d in despesas_fixas:
+        d.preparar()
 
-    total_receber = sum(c.valor for c in contas if c.status != "recebido")
-    total_recebido = sum((c.valor_recebido or c.valor) for c in contas if c.status == "recebido")
-
+    total_vendas = sum(v.total_dia or 0 for v in vendas)
+    total_despesas = sum(d.valor or 0 for d in despesas)
+    total_motos = sum(d.valor or 0 for d in despesas_motos)
+    total_fixas = sum(d.valor or 0 for d in despesas_fixas)
+    total_receber = sum(c.valor or 0 for c in contas if c.status != "recebido")
+    total_recebido = sum((c.valor_recebido or c.valor or 0) for c in contas if c.status == "recebido")
     total_boletos_aberto = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
     total_boletos_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
-
     total_despesas_geral = total_despesas + total_motos + total_fixas
     lucro = total_vendas - total_despesas_geral
+
+    detalhes_vendas = []
+    for v in vendas:
+        detalhes_vendas.append({
+            "data": texto_data(v.data_venda),
+            "farmacia": v.farmacia.nome_fantasia if v.farmacia else "-",
+            "vista": moeda(v.valor_vista),
+            "vulcabras": moeda(v.valor_vulcabras),
+            "debito": moeda(v.valor_debito),
+            "credito": moeda(v.valor_credito),
+            "pix": moeda(v.valor_pix),
+            "total": moeda(v.total_dia),
+            "observacao": v.observacao or "-"
+        })
+
+    detalhes_despesas = []
+    for d in despesas:
+        detalhes_despesas.append({
+            "data": texto_data(d.data_despesa),
+            "farmacia": d.farmacia.nome_fantasia if d.farmacia else "-",
+            "categoria": d.categoria,
+            "centro_custo": d.centro_custo or "-",
+            "descricao": d.descricao,
+            "forma_pagamento": d.forma_pagamento or "-",
+            "valor": moeda(d.valor),
+            "observacao": d.observacao or "-"
+        })
+
+    detalhes_motos = []
+    for d in despesas_motos:
+        detalhes_motos.append({
+            "data": texto_data(d.data_despesa),
+            "farmacia": d.farmacia.nome_fantasia if d.farmacia else "-",
+            "moto": d.moto.modelo if d.moto else "-",
+            "entregador": d.entregador.nome if d.entregador else "-",
+            "tipo_despesa": d.tipo_despesa,
+            "descricao": d.descricao,
+            "valor": moeda(d.valor),
+            "observacao": d.observacao or "-"
+        })
+
+    detalhes_fixas = []
+    for d in despesas_fixas:
+        detalhes_fixas.append({
+            "vencimento": texto_data(d.data_vencimento),
+            "pagamento": texto_data(d.data_pagamento),
+            "farmacia": d.farmacia.nome_fantasia if d.farmacia else "-",
+            "nome": d.nome,
+            "categoria": d.categoria,
+            "centro_custo": d.centro_custo or "-",
+            "status": d.status,
+            "valor": moeda(d.valor),
+            "observacao": d.observacao or "-"
+        })
+
+    detalhes_boletos = []
+    for b in boletos:
+        detalhes_boletos.append({
+            "empresa": b.empresa_nome,
+            "descricao": b.descricao or "-",
+            "farmacia": b.farmacia.nome_fantasia if b.farmacia else "-",
+            "vencimento": texto_data(b.data_vencimento),
+            "pagamento": texto_data(b.data_pagamento),
+            "valor_original": moeda(b.valor_original),
+            "juros": moeda(b.juros),
+            "valor_total": moeda(b.valor_total),
+            "valor_pago": moeda(b.valor_pago),
+            "status": b.status,
+            "observacao": b.observacao or "-"
+        })
+
+    detalhes_receber = []
+    for c in contas:
+        detalhes_receber.append({
+            "cliente": c.cliente_nome,
+            "descricao": c.descricao or "-",
+            "farmacia": c.farmacia.nome_fantasia if c.farmacia else "-",
+            "vencimento": texto_data(c.data_vencimento),
+            "recebimento": texto_data(c.data_recebimento),
+            "valor": moeda(c.valor),
+            "valor_recebido": moeda(c.valor_recebido),
+            "status": c.status,
+            "observacao": c.observacao or "-"
+        })
 
     return render_template(
         "relatorio_completo.html",
@@ -304,7 +404,13 @@ def relatorio_financeiro_completo():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", "")
+        data_fim=request.args.get("data_fim", ""),
+        detalhes_vendas=detalhes_vendas,
+        detalhes_despesas=detalhes_despesas,
+        detalhes_motos=detalhes_motos,
+        detalhes_fixas=detalhes_fixas,
+        detalhes_boletos=detalhes_boletos,
+        detalhes_receber=detalhes_receber
     )
 
 
@@ -339,36 +445,152 @@ def relatorio_financeiro_completo_pdf():
     for c in contas:
         c.preparar()
 
-    total_vendas = sum(v.total_dia for v in vendas)
-    total_despesas = sum(d.valor for d in despesas)
-    total_motos = sum(d.valor for d in despesas_motos)
-    total_fixas = sum(d.valor for d in despesas_fixas)
-    total_receber = sum(c.valor for c in contas if c.status != "recebido")
+    for d in despesas_fixas:
+        d.preparar()
+
+    total_vendas = sum(v.total_dia or 0 for v in vendas)
+    total_despesas = sum(d.valor or 0 for d in despesas)
+    total_motos = sum(d.valor or 0 for d in despesas_motos)
+    total_fixas = sum(d.valor or 0 for d in despesas_fixas)
+    total_receber = sum(c.valor or 0 for c in contas if c.status != "recebido")
     total_recebido = sum((c.valor_recebido or c.valor) for c in contas if c.status == "recebido")
     total_boletos_aberto = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
     total_boletos_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
-    total_despesas_geral = total_despesas + total_motos + total_fixas
-    lucro = total_vendas - total_despesas_geral
+    lucro = total_vendas - (total_despesas + total_motos + total_fixas)
 
-    periodo = formatar_periodo(data_inicio, data_fim)
-
-    resumo = [
-        ["Indicador", "Valor"],
-        ["Vendas", f"R$ {total_vendas:,.2f}"],
-        ["Despesas Gerais", f"R$ {total_despesas:,.2f}"],
-        ["Despesas das Motos", f"R$ {total_motos:,.2f}"],
-        ["Despesas Fixas", f"R$ {total_fixas:,.2f}"],
-        ["Boletos em Aberto", f"R$ {total_boletos_aberto:,.2f}"],
-        ["Boletos Pagos", f"R$ {total_boletos_pagos:,.2f}"],
-        ["A Receber", f"R$ {total_receber:,.2f}"],
-        ["Recebido", f"R$ {total_recebido:,.2f}"],
-        ["Resultado Final", f"R$ {lucro:,.2f}"],
+    secoes = [
+        {
+            "titulo": "Vendas",
+            "cabecalho": ["Data", "Farmácia", "À Vista", "Vulcabras", "Débito", "Crédito", "Pix", "Total"],
+            "linhas": [
+                [
+                    texto_data(v.data_venda),
+                    v.farmacia.nome_fantasia if v.farmacia else "-",
+                    moeda(v.valor_vista),
+                    moeda(v.valor_vulcabras),
+                    moeda(v.valor_debito),
+                    moeda(v.valor_credito),
+                    moeda(v.valor_pix),
+                    moeda(v.total_dia),
+                ]
+                for v in vendas
+            ] or [["-", "-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Vendas", moeda(total_vendas)]],
+        },
+        {
+            "titulo": "Despesas Gerais",
+            "cabecalho": ["Data", "Farmácia", "Categoria", "Centro Custo", "Descrição", "Forma Pgto", "Valor"],
+            "linhas": [
+                [
+                    texto_data(d.data_despesa),
+                    d.farmacia.nome_fantasia if d.farmacia else "-",
+                    d.categoria,
+                    d.centro_custo or "-",
+                    d.descricao,
+                    d.forma_pagamento or "-",
+                    moeda(d.valor),
+                ]
+                for d in despesas
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Despesas Gerais", moeda(total_despesas)]],
+        },
+        {
+            "titulo": "Despesas das Motos",
+            "cabecalho": ["Data", "Farmácia", "Moto", "Entregador", "Tipo", "Descrição", "Valor"],
+            "linhas": [
+                [
+                    texto_data(d.data_despesa),
+                    d.farmacia.nome_fantasia if d.farmacia else "-",
+                    d.moto.modelo if d.moto else "-",
+                    d.entregador.nome if d.entregador else "-",
+                    d.tipo_despesa,
+                    d.descricao,
+                    moeda(d.valor),
+                ]
+                for d in despesas_motos
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Despesas das Motos", moeda(total_motos)]],
+        },
+        {
+            "titulo": "Despesas Fixas",
+            "cabecalho": ["Vencimento", "Pagamento", "Farmácia", "Nome", "Categoria", "Status", "Valor"],
+            "linhas": [
+                [
+                    texto_data(d.data_vencimento),
+                    texto_data(d.data_pagamento),
+                    d.farmacia.nome_fantasia if d.farmacia else "-",
+                    d.nome,
+                    d.categoria,
+                    d.status,
+                    moeda(d.valor),
+                ]
+                for d in despesas_fixas
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Despesas Fixas", moeda(total_fixas)]],
+        },
+        {
+            "titulo": "Boletos a Pagar",
+            "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Pagamento", "Original", "Juros", "Total", "Status"],
+            "linhas": [
+                [
+                    b.empresa_nome,
+                    b.farmacia.nome_fantasia if b.farmacia else "-",
+                    texto_data(b.data_vencimento),
+                    texto_data(b.data_pagamento),
+                    moeda(b.valor_original),
+                    moeda(b.juros),
+                    moeda(b.valor_total),
+                    b.status,
+                ]
+                for b in boletos
+            ] or [["-", "-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [
+                ["Boletos em Aberto", moeda(total_boletos_aberto)],
+                ["Boletos Pagos", moeda(total_boletos_pagos)],
+            ],
+        },
+        {
+            "titulo": "Boletos a Receber",
+            "cabecalho": ["Cliente", "Farmácia", "Vencimento", "Recebimento", "Valor", "Valor Recebido", "Status"],
+            "linhas": [
+                [
+                    c.cliente_nome,
+                    c.farmacia.nome_fantasia if c.farmacia else "-",
+                    texto_data(c.data_vencimento),
+                    texto_data(c.data_recebimento),
+                    moeda(c.valor),
+                    moeda(c.valor_recebido),
+                    c.status,
+                ]
+                for c in contas
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [
+                ["A Receber", moeda(total_receber)],
+                ["Recebido", moeda(total_recebido)],
+            ],
+        },
+        {
+            "titulo": "Resultado Final",
+            "cabecalho": ["Indicador", "Valor"],
+            "linhas": [
+                ["Vendas", moeda(total_vendas)],
+                ["Despesas Gerais", moeda(total_despesas)],
+                ["Despesas das Motos", moeda(total_motos)],
+                ["Despesas Fixas", moeda(total_fixas)],
+                ["Boletos em Aberto", moeda(total_boletos_aberto)],
+                ["Boletos Pagos", moeda(total_boletos_pagos)],
+                ["A Receber", moeda(total_receber)],
+                ["Recebido", moeda(total_recebido)],
+                ["Lucro / Resultado Final", moeda(lucro)],
+            ],
+            "resumo": [],
+        },
     ]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório Financeiro Completo - Financeiro Farm",
-        periodo,
-        resumo,
+        formatar_periodo(data_inicio, data_fim),
+        secoes,
         "relatorio_financeiro_completo.pdf"
     )
 
@@ -390,10 +612,24 @@ def relatorio_vendas():
 
     total = sum(v.total_dia or 0 for v in vendas)
 
+    detalhes = []
+    for v in vendas:
+        detalhes.append({
+            "Data": texto_data(v.data_venda),
+            "Farmácia": v.farmacia.nome_fantasia if v.farmacia else "-",
+            "À Vista": moeda(v.valor_vista),
+            "Vulcabras": moeda(v.valor_vulcabras),
+            "Débito": moeda(v.valor_debito),
+            "Crédito": moeda(v.valor_credito),
+            "Pix": moeda(v.valor_pix),
+            "Total": moeda(v.total_dia),
+            "Observação": v.observacao or "-"
+        })
+
     return render_template(
         "relatorio_simples.html",
         titulo="Relatório de Vendas",
-        subtitulo="Resumo de vendas do período",
+        subtitulo="Resumo detalhado de vendas do período",
         total=total,
         cor="blue",
         label_total="Total de Vendas",
@@ -401,7 +637,8 @@ def relatorio_vendas():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", "")
+        data_fim=request.args.get("data_fim", ""),
+        detalhes=detalhes
     )
 
 
@@ -420,15 +657,29 @@ def relatorio_vendas_pdf():
     vendas = aplicar_filtro_periodo_lista(vendas, "data_venda", data_inicio, data_fim)
     total = sum(v.total_dia or 0 for v in vendas)
 
-    resumo = [
-        ["Indicador", "Valor"],
-        ["Total de Vendas", f"R$ {total:,.2f}"],
-    ]
+    secoes = [{
+        "titulo": "Detalhamento de Vendas",
+        "cabecalho": ["Data", "Farmácia", "À Vista", "Vulcabras", "Débito", "Crédito", "Pix", "Total"],
+        "linhas": [
+            [
+                texto_data(v.data_venda),
+                v.farmacia.nome_fantasia if v.farmacia else "-",
+                moeda(v.valor_vista),
+                moeda(v.valor_vulcabras),
+                moeda(v.valor_debito),
+                moeda(v.valor_credito),
+                moeda(v.valor_pix),
+                moeda(v.total_dia),
+            ]
+            for v in vendas
+        ] or [["-", "-", "-", "-", "-", "-", "-", "-"]],
+        "resumo": [["Total de Vendas", moeda(total)]],
+    }]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório de Vendas - Financeiro Farm",
         formatar_periodo(data_inicio, data_fim),
-        resumo,
+        secoes,
         "relatorio_vendas.pdf"
     )
 
@@ -450,10 +701,23 @@ def relatorio_despesas():
 
     total = sum(d.valor or 0 for d in despesas)
 
+    detalhes = []
+    for d in despesas:
+        detalhes.append({
+            "Data": texto_data(d.data_despesa),
+            "Farmácia": d.farmacia.nome_fantasia if d.farmacia else "-",
+            "Categoria": d.categoria,
+            "Centro Custo": d.centro_custo or "-",
+            "Descrição": d.descricao,
+            "Forma Pgto": d.forma_pagamento or "-",
+            "Valor": moeda(d.valor),
+            "Observação": d.observacao or "-"
+        })
+
     return render_template(
         "relatorio_simples.html",
         titulo="Relatório de Despesas Gerais",
-        subtitulo="Resumo de despesas gerais do período",
+        subtitulo="Resumo detalhado de despesas gerais do período",
         total=total,
         cor="red",
         label_total="Total de Despesas Gerais",
@@ -461,7 +725,8 @@ def relatorio_despesas():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", "")
+        data_fim=request.args.get("data_fim", ""),
+        detalhes=detalhes
     )
 
 
@@ -480,15 +745,28 @@ def relatorio_despesas_pdf():
     despesas = aplicar_filtro_periodo_lista(despesas, "data_despesa", data_inicio, data_fim)
     total = sum(d.valor or 0 for d in despesas)
 
-    resumo = [
-        ["Indicador", "Valor"],
-        ["Total de Despesas Gerais", f"R$ {total:,.2f}"],
-    ]
+    secoes = [{
+        "titulo": "Detalhamento de Despesas Gerais",
+        "cabecalho": ["Data", "Farmácia", "Categoria", "Centro Custo", "Descrição", "Forma Pgto", "Valor"],
+        "linhas": [
+            [
+                texto_data(d.data_despesa),
+                d.farmacia.nome_fantasia if d.farmacia else "-",
+                d.categoria,
+                d.centro_custo or "-",
+                d.descricao,
+                d.forma_pagamento or "-",
+                moeda(d.valor),
+            ]
+            for d in despesas
+        ] or [["-", "-", "-", "-", "-", "-", "-"]],
+        "resumo": [["Total de Despesas Gerais", moeda(total)]],
+    }]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório de Despesas Gerais - Financeiro Farm",
         formatar_periodo(data_inicio, data_fim),
-        resumo,
+        secoes,
         "relatorio_despesas_gerais.pdf"
     )
 
@@ -510,10 +788,23 @@ def relatorio_despesas_motos():
 
     total = sum(d.valor or 0 for d in despesas_motos)
 
+    detalhes = []
+    for d in despesas_motos:
+        detalhes.append({
+            "Data": texto_data(d.data_despesa),
+            "Farmácia": d.farmacia.nome_fantasia if d.farmacia else "-",
+            "Moto": d.moto.modelo if d.moto else "-",
+            "Entregador": d.entregador.nome if d.entregador else "-",
+            "Tipo Despesa": d.tipo_despesa,
+            "Descrição": d.descricao,
+            "Valor": moeda(d.valor),
+            "Observação": d.observacao or "-"
+        })
+
     return render_template(
         "relatorio_simples.html",
         titulo="Relatório de Despesas das Motos",
-        subtitulo="Resumo de despesas das motos do período",
+        subtitulo="Resumo detalhado de despesas das motos do período",
         total=total,
         cor="orange",
         label_total="Total de Despesas das Motos",
@@ -521,7 +812,8 @@ def relatorio_despesas_motos():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", "")
+        data_fim=request.args.get("data_fim", ""),
+        detalhes=detalhes
     )
 
 
@@ -540,15 +832,28 @@ def relatorio_despesas_motos_pdf():
     despesas_motos = aplicar_filtro_periodo_lista(despesas_motos, "data_despesa", data_inicio, data_fim)
     total = sum(d.valor or 0 for d in despesas_motos)
 
-    resumo = [
-        ["Indicador", "Valor"],
-        ["Total de Despesas das Motos", f"R$ {total:,.2f}"],
-    ]
+    secoes = [{
+        "titulo": "Detalhamento de Despesas das Motos",
+        "cabecalho": ["Data", "Farmácia", "Moto", "Entregador", "Tipo", "Descrição", "Valor"],
+        "linhas": [
+            [
+                texto_data(d.data_despesa),
+                d.farmacia.nome_fantasia if d.farmacia else "-",
+                d.moto.modelo if d.moto else "-",
+                d.entregador.nome if d.entregador else "-",
+                d.tipo_despesa,
+                d.descricao,
+                moeda(d.valor),
+            ]
+            for d in despesas_motos
+        ] or [["-", "-", "-", "-", "-", "-", "-"]],
+        "resumo": [["Total de Despesas das Motos", moeda(total)]],
+    }]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório de Despesas das Motos - Financeiro Farm",
         formatar_periodo(data_inicio, data_fim),
-        resumo,
+        secoes,
         "relatorio_despesas_motos.pdf"
     )
 
@@ -568,12 +873,29 @@ def relatorio_despesas_fixas():
     despesas_fixas = DespesaFixaLancamento.query.filter(DespesaFixaLancamento.farmacia_id.in_(farmacia_ids)).all()
     despesas_fixas = aplicar_filtro_periodo_lista(despesas_fixas, "data_vencimento", data_inicio, data_fim)
 
+    for d in despesas_fixas:
+        d.preparar()
+
     total = sum(d.valor or 0 for d in despesas_fixas)
+
+    detalhes = []
+    for d in despesas_fixas:
+        detalhes.append({
+            "Vencimento": texto_data(d.data_vencimento),
+            "Pagamento": texto_data(d.data_pagamento),
+            "Farmácia": d.farmacia.nome_fantasia if d.farmacia else "-",
+            "Nome": d.nome,
+            "Categoria": d.categoria,
+            "Centro Custo": d.centro_custo or "-",
+            "Status": d.status,
+            "Valor": moeda(d.valor),
+            "Observação": d.observacao or "-"
+        })
 
     return render_template(
         "relatorio_simples.html",
         titulo="Relatório de Despesas Fixas",
-        subtitulo="Resumo de despesas fixas do período",
+        subtitulo="Resumo detalhado de despesas fixas do período",
         total=total,
         cor="purple",
         label_total="Total de Despesas Fixas",
@@ -581,7 +903,8 @@ def relatorio_despesas_fixas():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", "")
+        data_fim=request.args.get("data_fim", ""),
+        detalhes=detalhes
     )
 
 
@@ -598,17 +921,34 @@ def relatorio_despesas_fixas_pdf():
 
     despesas_fixas = DespesaFixaLancamento.query.filter(DespesaFixaLancamento.farmacia_id.in_(farmacia_ids)).all()
     despesas_fixas = aplicar_filtro_periodo_lista(despesas_fixas, "data_vencimento", data_inicio, data_fim)
+
+    for d in despesas_fixas:
+        d.preparar()
+
     total = sum(d.valor or 0 for d in despesas_fixas)
 
-    resumo = [
-        ["Indicador", "Valor"],
-        ["Total de Despesas Fixas", f"R$ {total:,.2f}"],
-    ]
+    secoes = [{
+        "titulo": "Detalhamento de Despesas Fixas",
+        "cabecalho": ["Vencimento", "Pagamento", "Farmácia", "Nome", "Categoria", "Status", "Valor"],
+        "linhas": [
+            [
+                texto_data(d.data_vencimento),
+                texto_data(d.data_pagamento),
+                d.farmacia.nome_fantasia if d.farmacia else "-",
+                d.nome,
+                d.categoria,
+                d.status,
+                moeda(d.valor),
+            ]
+            for d in despesas_fixas
+        ] or [["-", "-", "-", "-", "-", "-", "-"]],
+        "resumo": [["Total de Despesas Fixas", moeda(total)]],
+    }]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório de Despesas Fixas - Financeiro Farm",
         formatar_periodo(data_inicio, data_fim),
-        resumo,
+        secoes,
         "relatorio_despesas_fixas.pdf"
     )
 
@@ -634,10 +974,32 @@ def relatorio_boletos_pagar():
     total = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
     total_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
 
+    detalhes_1 = []
+    detalhes_2 = []
+
+    for b in boletos:
+        linha = {
+            "Empresa": b.empresa_nome,
+            "Descrição": b.descricao or "-",
+            "Farmácia": b.farmacia.nome_fantasia if b.farmacia else "-",
+            "Vencimento": texto_data(b.data_vencimento),
+            "Pagamento": texto_data(b.data_pagamento),
+            "Original": moeda(b.valor_original),
+            "Juros": moeda(b.juros),
+            "Total": moeda(b.valor_total),
+            "Pago": moeda(b.valor_pago),
+            "Status": b.status
+        }
+
+        if b.status == "pago":
+            detalhes_2.append(linha)
+        else:
+            detalhes_1.append(linha)
+
     return render_template(
         "relatorio_duplo.html",
         titulo="Relatório de Boletos a Pagar",
-        subtitulo="Resumo de boletos a pagar do período",
+        subtitulo="Resumo detalhado de boletos a pagar do período",
         total_1=total,
         total_2=total_pagos,
         label_1="Boletos em Aberto",
@@ -648,7 +1010,9 @@ def relatorio_boletos_pagar():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", "")
+        data_fim=request.args.get("data_fim", ""),
+        detalhes_1=detalhes_1,
+        detalhes_2=detalhes_2
     )
 
 
@@ -672,16 +1036,47 @@ def relatorio_boletos_pagar_pdf():
     total_aberto = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
     total_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
 
-    resumo = [
-        ["Indicador", "Valor"],
-        ["Boletos em Aberto", f"R$ {total_aberto:,.2f}"],
-        ["Boletos Pagos", f"R$ {total_pagos:,.2f}"],
+    secoes = [
+        {
+            "titulo": "Boletos em Aberto",
+            "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Original", "Juros", "Total", "Status"],
+            "linhas": [
+                [
+                    b.empresa_nome,
+                    b.farmacia.nome_fantasia if b.farmacia else "-",
+                    texto_data(b.data_vencimento),
+                    moeda(b.valor_original),
+                    moeda(b.juros),
+                    moeda(b.valor_total),
+                    b.status,
+                ]
+                for b in boletos if b.status in ["a_vencer", "vencido"]
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total em Aberto", moeda(total_aberto)]],
+        },
+        {
+            "titulo": "Boletos Pagos",
+            "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Pagamento", "Total", "Pago", "Status"],
+            "linhas": [
+                [
+                    b.empresa_nome,
+                    b.farmacia.nome_fantasia if b.farmacia else "-",
+                    texto_data(b.data_vencimento),
+                    texto_data(b.data_pagamento),
+                    moeda(b.valor_total),
+                    moeda(b.valor_pago),
+                    b.status,
+                ]
+                for b in boletos if b.status == "pago"
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total Pago", moeda(total_pagos)]],
+        },
     ]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório de Boletos a Pagar - Financeiro Farm",
         formatar_periodo(data_inicio, data_fim),
-        resumo,
+        secoes,
         "relatorio_boletos_pagar.pdf"
     )
 
@@ -707,10 +1102,30 @@ def relatorio_boletos_receber():
     total_receber = sum(c.valor or 0 for c in contas if c.status != "recebido")
     total_recebido = sum((c.valor_recebido or c.valor or 0) for c in contas if c.status == "recebido")
 
+    detalhes_1 = []
+    detalhes_2 = []
+
+    for c in contas:
+        linha = {
+            "Cliente": c.cliente_nome,
+            "Descrição": c.descricao or "-",
+            "Farmácia": c.farmacia.nome_fantasia if c.farmacia else "-",
+            "Vencimento": texto_data(c.data_vencimento),
+            "Recebimento": texto_data(c.data_recebimento),
+            "Valor": moeda(c.valor),
+            "Valor Recebido": moeda(c.valor_recebido),
+            "Status": c.status
+        }
+
+        if c.status == "recebido":
+            detalhes_2.append(linha)
+        else:
+            detalhes_1.append(linha)
+
     return render_template(
         "relatorio_duplo.html",
         titulo="Relatório de Boletos a Receber",
-        subtitulo="Resumo de boletos a receber do período",
+        subtitulo="Resumo detalhado de boletos a receber do período",
         total_1=total_receber,
         total_2=total_recebido,
         label_1="A Receber",
@@ -721,7 +1136,9 @@ def relatorio_boletos_receber():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", "")
+        data_fim=request.args.get("data_fim", ""),
+        detalhes_1=detalhes_1,
+        detalhes_2=detalhes_2
     )
 
 
@@ -745,15 +1162,43 @@ def relatorio_boletos_receber_pdf():
     total_receber = sum(c.valor or 0 for c in contas if c.status != "recebido")
     total_recebido = sum((c.valor_recebido or c.valor or 0) for c in contas if c.status == "recebido")
 
-    resumo = [
-        ["Indicador", "Valor"],
-        ["A Receber", f"R$ {total_receber:,.2f}"],
-        ["Recebido", f"R$ {total_recebido:,.2f}"],
+    secoes = [
+        {
+            "titulo": "Contas a Receber",
+            "cabecalho": ["Cliente", "Farmácia", "Vencimento", "Valor", "Status"],
+            "linhas": [
+                [
+                    c.cliente_nome,
+                    c.farmacia.nome_fantasia if c.farmacia else "-",
+                    texto_data(c.data_vencimento),
+                    moeda(c.valor),
+                    c.status,
+                ]
+                for c in contas if c.status != "recebido"
+            ] or [["-", "-", "-", "-", "-"]],
+            "resumo": [["Total a Receber", moeda(total_receber)]],
+        },
+        {
+            "titulo": "Contas Recebidas",
+            "cabecalho": ["Cliente", "Farmácia", "Vencimento", "Recebimento", "Valor Recebido", "Status"],
+            "linhas": [
+                [
+                    c.cliente_nome,
+                    c.farmacia.nome_fantasia if c.farmacia else "-",
+                    texto_data(c.data_vencimento),
+                    texto_data(c.data_recebimento),
+                    moeda(c.valor_recebido or c.valor),
+                    c.status,
+                ]
+                for c in contas if c.status == "recebido"
+            ] or [["-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total Recebido", moeda(total_recebido)]],
+        },
     ]
 
-    return build_pdf_resumo(
+    return build_pdf_detalhado(
         "Relatório de Boletos a Receber - Financeiro Farm",
         formatar_periodo(data_inicio, data_fim),
-        resumo,
+        secoes,
         "relatorio_boletos_receber.pdf"
     )

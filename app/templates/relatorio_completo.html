@@ -100,12 +100,53 @@
 .resultado-box.negativo {
     background: linear-gradient(135deg, #7f1d1d, #dc2626);
 }
+
+.relatorio-section {
+    margin-top: 24px;
+}
+
+.relatorio-section h3 {
+    margin-bottom: 12px;
+    color: #0f172a;
+}
+
+.relatorio-table-wrap {
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.relatorio-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.relatorio-table th,
+.relatorio-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.relatorio-table thead th {
+    background: #1e293b;
+    color: #fff;
+    font-weight: 700;
+}
+
+.relatorio-table tbody tr:hover {
+    background: #f8fafc;
+}
 </style>
 
 <div class="relatorio-header">
     <div>
         <h1 class="relatorio-title">📊 Relatório Financeiro Completo</h1>
-        <p class="relatorio-subtitle">Visão consolidada das finanças da farmácia</p>
+        <p class="relatorio-subtitle">Visão consolidada e detalhada das finanças</p>
     </div>
 
     <div class="relatorio-toolbar">
@@ -117,15 +158,27 @@
 </div>
 
 <div class="form-card">
-    <form method="GET" class="form-grid two-columns">
+    <form method="GET" class="form-grid three-columns">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="form-group">
             <label>Data Inicial</label>
-            <input type="date" name="data_inicio" value="{{ request.args.get('data_inicio', '') }}">
+            <input type="date" name="data_inicio" value="{{ data_inicio }}">
         </div>
 
         <div class="form-group">
             <label>Data Final</label>
-            <input type="date" name="data_fim" value="{{ request.args.get('data_fim', '') }}">
+            <input type="date" name="data_fim" value="{{ data_fim }}">
         </div>
 
         <div class="form-actions full">
@@ -181,4 +234,46 @@
     <h2>🔥 Resultado Final</h2>
     <h1>R$ {{ "%.2f"|format(lucro) }}</h1>
 </div>
+
+{% macro tabela_detalhe(titulo, linhas) %}
+<div class="relatorio-section">
+    <h3>{{ titulo }}</h3>
+    <div class="relatorio-table-wrap">
+        <table class="relatorio-table">
+            <thead>
+                <tr>
+                    {% if linhas %}
+                        {% for chave in linhas[0].keys() %}
+                            <th>{{ chave }}</th>
+                        {% endfor %}
+                    {% else %}
+                        <th>Sem dados</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if linhas %}
+                    {% for linha in linhas %}
+                        <tr>
+                            {% for valor in linha.values() %}
+                                <td>{{ valor }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td>Nenhum registro encontrado.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endmacro %}
+
+{{ tabela_detalhe('Detalhamento de Vendas', detalhes_vendas) }}
+{{ tabela_detalhe('Detalhamento de Despesas Gerais', detalhes_despesas) }}
+{{ tabela_detalhe('Detalhamento de Despesas das Motos', detalhes_motos) }}
+{{ tabela_detalhe('Detalhamento de Despesas Fixas', detalhes_fixas) }}
+{{ tabela_detalhe('Detalhamento de Boletos a Pagar', detalhes_boletos) }}
+{{ tabela_detalhe('Detalhamento de Boletos a Receber', detalhes_receber) }}
+
 {% endblock %}

@@ -3,15 +3,141 @@
 {% block title %}Despesas | Financeiro Farm{% endblock %}
 
 {% block content %}
-<div class="page-top">
+<style>
+.premium-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.premium-top h1 {
+    margin: 0;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.premium-top p {
+    margin: 6px 0 0 0;
+    color: #64748b;
+}
+
+.premium-filter {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    margin-bottom: 18px;
+}
+
+.premium-table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+
+.premium-title-area {
+    padding: 18px 18px 0 18px;
+}
+
+.premium-title-area h3 {
+    margin: 0;
+    color: #0f172a;
+}
+
+.premium-table-wrap {
+    overflow-x: auto;
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.premium-table thead th {
+    background: #0f172a;
+    color: #fff;
+    text-align: left;
+    padding: 14px 12px;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.premium-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 13px;
+    color: #334155;
+    vertical-align: top;
+}
+
+.premium-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.badge-soft {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge-soft.orange {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.badge-soft.blue {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.badge-soft.green {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-soft.red {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.badge-soft.purple {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 130px;
+}
+
+.money-strong {
+    font-weight: 800;
+    color: #0f172a;
+}
+</style>
+
+<div class="premium-top">
     <div>
-        <h1 class="page-title">Despesas</h1>
-        <p class="page-subtitle">Controle unificado de despesas normais e fixas</p>
+        <h1>Despesas</h1>
+        <p>Controle premium e unificado de despesas normais, fixas e parceladas</p>
     </div>
 </div>
 
-<div class="filter-card premium-filter">
-    <form method="GET" class="filters-inline">
+<div class="premium-filter">
+    <form method="GET" class="form-grid two-columns">
         <div class="form-group">
             <label>Farmácia</label>
             <select name="farmacia_id">
@@ -33,7 +159,7 @@
             </select>
         </div>
 
-        <div class="form-actions">
+        <div class="form-actions full">
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="{{ url_for('despesas.listar_despesas') }}" class="btn btn-secondary">Limpar</a>
             <a href="{{ url_for('despesas.nova_despesa') }}" class="btn btn-success">+ Nova Despesa</a>
@@ -41,69 +167,89 @@
     </form>
 </div>
 
-<div class="table-card">
-    <h3>Lista de Despesas</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Tipo</th>
-                <th>Farmácia</th>
-                <th>Categoria</th>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Data / Referência</th>
-                <th>Extra</th>
-                <th>Status</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for despesa in despesas %}
-            <tr>
-                <td>
-                    {% if despesa.tipo == 'fixa' %}
-                        <span class="badge info">Fixa</span>
-                    {% else %}
-                        <span class="badge warning">Normal</span>
-                    {% endif %}
-                </td>
-                <td>{{ despesa.farmacia }}</td>
-                <td>{{ despesa.categoria }}</td>
-                <td>{{ despesa.descricao }}</td>
-                <td>R$ {{ "%.2f"|format(despesa.valor) }}</td>
-                <td>
-                    {% if despesa.data_ref %}
-                        {{ despesa.data_ref.strftime('%d/%m/%Y') }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>{{ despesa.extra }}</td>
-                <td>
-                    {% if despesa.status == 'Ativa' %}
-                        <span class="badge success">Ativa</span>
-                    {% elif despesa.status == 'Inativa' %}
-                        <span class="badge danger">Inativa</span>
-                    {% else %}
-                        <span class="badge info">{{ despesa.status }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="actions-column">
-                        <a href="{{ url_for('despesas.editar_despesa', tipo=despesa.tipo, despesa_id=despesa.id) }}" class="btn btn-small btn-secondary">Editar</a>
+<div class="premium-table-card">
+    <div class="premium-title-area">
+        <h3>Lista de Despesas</h3>
+    </div>
 
-                        <form method="POST" action="{{ url_for('despesas.excluir_despesa', tipo=despesa.tipo, despesa_id=despesa.id) }}" onsubmit="return confirm('Deseja excluir esta despesa?');">
-                            <button type="submit" class="btn btn-small btn-danger">Excluir</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="9">Nenhuma despesa encontrada.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="premium-table-wrap">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Farmácia</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Data / Referência</th>
+                    <th>Extra</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for despesa in despesas %}
+                {% set parcelado = '(' in despesa.descricao and '/' in despesa.descricao %}
+                <tr>
+                    <td>
+                        {% if despesa.tipo == 'fixa' %}
+                            <span class="badge-soft blue">Fixa</span>
+                        {% else %}
+                            <span class="badge-soft orange">Normal</span>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ despesa.farmacia }}</td>
+                    <td>{{ despesa.categoria }}</td>
+
+                    <td>
+                        <strong>{{ despesa.descricao }}</strong>
+                        {% if parcelado %}
+                            <div style="margin-top:6px;">
+                                <span class="badge-soft purple">Parcelado</span>
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <td class="money-strong">R$ {{ "%.2f"|format(despesa.valor) }}</td>
+
+                    <td>
+                        {% if despesa.data_ref %}
+                            {{ despesa.data_ref.strftime('%d/%m/%Y') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    <td>{{ despesa.extra }}</td>
+
+                    <td>
+                        {% if despesa.status == 'Ativa' %}
+                            <span class="badge-soft green">Ativa</span>
+                        {% elif despesa.status == 'Inativa' %}
+                            <span class="badge-soft red">Inativa</span>
+                        {% else %}
+                            <span class="badge-soft blue">{{ despesa.status }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <div class="actions-stack">
+                            <a href="{{ url_for('despesas.editar_despesa', tipo=despesa.tipo, despesa_id=despesa.id) }}" class="btn btn-small btn-secondary">Editar</a>
+
+                            <form method="POST" action="{{ url_for('despesas.excluir_despesa', tipo=despesa.tipo, despesa_id=despesa.id) }}" onsubmit="return confirm('Deseja excluir esta despesa?');">
+                                <button type="submit" class="btn btn-small btn-danger">Excluir</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9">Nenhuma despesa encontrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

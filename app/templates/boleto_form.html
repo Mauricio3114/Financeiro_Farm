@@ -5,68 +5,242 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
+<style>
+.form-shell {
+    display: grid;
+    gap: 18px;
+}
+
+.premium-box {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.premium-box h3 {
+    margin: 0 0 14px 0;
+    font-size: 17px;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.premium-box p {
+    margin: -4px 0 16px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.premium-box.parcelamento {
+    background: linear-gradient(135deg, #faf5ff, #f5f3ff);
+    border-left: 6px solid #7c3aed;
+}
+
+.premium-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #ede9fe;
+    color: #6d28d9;
+    margin-left: 8px;
+}
+
+.page-header-premium {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.page-header-premium h1 {
+    margin: 0;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.page-header-premium p {
+    margin: 6px 0 0 0;
+    color: #64748b;
+}
+
+.form-grid.two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    border: 1px solid #dbe2ea;
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.08);
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.helper-text {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+    .form-grid.two-columns {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="page-header-premium">
     <div>
         <h1>{% if boleto %}Editar Boleto{% else %}Novo Boleto{% endif %}</h1>
-        <p>Cadastre a conta com vencimento, pagamento e juros automático</p>
+        <p>Cadastro profissional de contas a pagar com parcelamento automático</p>
     </div>
 </div>
 
-<div class="form-card">
-    <form method="POST" class="form-grid two-columns">
-        <div class="form-group">
-            <label>Farmácia *</label>
-            <select name="farmacia_id" required>
-                <option value="">Selecione</option>
-                {% for farmacia in farmacias %}
-                    <option value="{{ farmacia.id }}" {% if boleto and boleto.farmacia_id == farmacia.id %}selected{% endif %}>
-                        {{ farmacia.nome_fantasia }}
-                    </option>
-                {% endfor %}
-            </select>
+<form method="POST" class="form-shell">
+    <div class="premium-box">
+        <h3>🏢 Dados do boleto</h3>
+        <p>Informe os dados principais da cobrança.</p>
+
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Farmácia *</label>
+                <select name="farmacia_id" required>
+                    <option value="">Selecione</option>
+                    {% for farmacia in farmacias %}
+                        <option value="{{ farmacia.id }}" {% if boleto and boleto.farmacia_id == farmacia.id %}selected{% endif %}>
+                            {{ farmacia.nome_fantasia }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Nome da Empresa *</label>
+                <input type="text" name="empresa_nome" value="{{ boleto.empresa_nome if boleto else '' }}" required>
+            </div>
+
+            <div class="form-group full">
+                <label>Descrição</label>
+                <input type="text" name="descricao" value="{{ boleto.descricao if boleto else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Valor Original *</label>
+                <input type="text" name="valor_original" value="{{ boleto.valor_original if boleto else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Data de Vencimento *</label>
+                <input type="date" name="data_vencimento" value="{{ boleto.data_vencimento.strftime('%Y-%m-%d') if boleto and boleto.data_vencimento else '' }}" required>
+            </div>
+        </div>
+    </div>
+
+    {% if not boleto %}
+    <div class="premium-box parcelamento">
+        <h3>💳 Parcelamento <span class="premium-badge">Automático</span></h3>
+        <p>O sistema divide o valor e cria todas as parcelas com datas mensais.</p>
+
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Quantidade de Parcelas</label>
+                <select name="parcelas" id="parcelas" onchange="toggleParcelamentoBoleto()">
+                    {% for i in range(1, 13) %}
+                        <option value="{{ i }}" {% if i == 1 %}selected{% endif %}>{{ i }}x</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" id="grupo_primeira_parcela_boleto" style="display:none;">
+                <label>Primeira Data da Parcela</label>
+                <input type="date" name="primeira_data_parcela">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Nome da Empresa *</label>
-            <input type="text" name="empresa_nome" value="{{ boleto.empresa_nome if boleto else '' }}" required>
+        <div class="helper-text">
+            Exemplo: R$ 3.000,00 em 3x gera 3 boletos com vencimentos mensais.
         </div>
+    </div>
+    {% endif %}
 
-        <div class="form-group full">
-            <label>Descrição</label>
-            <input type="text" name="descricao" value="{{ boleto.descricao if boleto else '' }}">
-        </div>
+    <div class="premium-box">
+        <h3>✔ Pagamento</h3>
+        <p>Preencha apenas se o boleto já tiver sido pago.</p>
 
-        <div class="form-group">
-            <label>Valor Original *</label>
-            <input type="text" name="valor_original" value="{{ boleto.valor_original if boleto else '' }}" required>
-        </div>
+        <div class="form-grid two-columns">
+            <div class="form-group">
+                <label>Data do Pagamento</label>
+                <input type="date" name="data_pagamento" value="{{ boleto.data_pagamento.strftime('%Y-%m-%d') if boleto and boleto.data_pagamento else '' }}">
+            </div>
 
-        <div class="form-group">
-            <label>Data de Vencimento *</label>
-            <input type="date" name="data_vencimento" value="{{ boleto.data_vencimento.strftime('%Y-%m-%d') if boleto and boleto.data_vencimento else '' }}" required>
-        </div>
+            <div class="form-group">
+                <label>Valor Pago</label>
+                <input type="text" name="valor_pago" value="{{ boleto.valor_pago if boleto and boleto.valor_pago is not none else '' }}">
+            </div>
 
-        <div class="form-group">
-            <label>Data do Pagamento</label>
-            <input type="date" name="data_pagamento" value="{{ boleto.data_pagamento.strftime('%Y-%m-%d') if boleto and boleto.data_pagamento else '' }}">
+            <div class="form-group full">
+                <label>Observação</label>
+                <textarea name="observacao" rows="4">{{ boleto.observacao if boleto else '' }}</textarea>
+            </div>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label>Valor Pago</label>
-            <input type="text" name="valor_pago" value="{{ boleto.valor_pago if boleto and boleto.valor_pago is not none else '' }}">
-        </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            {% if boleto %}Salvar Alterações{% else %}Salvar Boleto{% endif %}
+        </button>
+        <a href="{{ url_for('boletos.listar_boletos') }}" class="btn btn-secondary">Voltar</a>
+    </div>
+</form>
 
-        <div class="form-group full">
-            <label>Observação</label>
-            <textarea name="observacao" rows="4">{{ boleto.observacao if boleto else '' }}</textarea>
-        </div>
+<script>
+function toggleParcelamentoBoleto() {
+    const parcelas = document.getElementById('parcelas');
+    const grupo = document.getElementById('grupo_primeira_parcela_boleto');
 
-        <div class="form-actions full">
-            <button type="submit" class="btn btn-primary">
-                {% if boleto %}Salvar Alterações{% else %}Salvar Boleto{% endif %}
-            </button>
-            <a href="{{ url_for('boletos.listar_boletos') }}" class="btn btn-secondary">Voltar</a>
-        </div>
-    </form>
-</div>
+    if (!parcelas || !grupo) return;
+    grupo.style.display = parseInt(parcelas.value) > 1 ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    toggleParcelamentoBoleto();
+});
+</script>
 {% endblock %}

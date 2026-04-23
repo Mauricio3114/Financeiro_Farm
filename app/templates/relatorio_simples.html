@@ -68,6 +68,39 @@
 .relatorio-card.green { border-left: 6px solid #16a34a; }
 .relatorio-card.teal { border-left: 6px solid #0f766e; }
 .relatorio-card.dark { border-left: 6px solid #334155; }
+
+.relatorio-table-wrap {
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    border: 1px solid #e5e7eb;
+    margin-top: 20px;
+}
+
+.relatorio-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.relatorio-table th,
+.relatorio-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.relatorio-table thead th {
+    background: #1e293b;
+    color: #fff;
+    font-weight: 700;
+}
+
+.relatorio-table tbody tr:hover {
+    background: #f8fafc;
+}
 </style>
 
 <div class="relatorio-header">
@@ -85,7 +118,19 @@
 </div>
 
 <div class="form-card">
-    <form method="GET" class="form-grid two-columns">
+    <form method="GET" class="form-grid three-columns">
+        <div class="form-group">
+            <label>Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="form-group">
             <label>Data Inicial</label>
             <input type="date" name="data_inicio" value="{{ data_inicio }}">
@@ -108,5 +153,34 @@
         <div class="relatorio-card-label">{{ label_total }}</div>
         <div class="relatorio-card-value">R$ {{ "%.2f"|format(total) }}</div>
     </div>
+</div>
+
+<div class="relatorio-table-wrap">
+    <table class="relatorio-table">
+        <thead>
+            <tr>
+                {% if detalhes %}
+                    {% for chave in detalhes[0].keys() %}
+                        <th>{{ chave }}</th>
+                    {% endfor %}
+                {% else %}
+                    <th>Sem dados</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if detalhes %}
+                {% for linha in detalhes %}
+                    <tr>
+                        {% for valor in linha.values() %}
+                            <td>{{ valor }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr><td>Nenhum registro encontrado.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

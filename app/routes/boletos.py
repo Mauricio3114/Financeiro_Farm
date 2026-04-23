@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from calendar import monthrange
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
@@ -23,6 +24,20 @@ def farmacias_do_usuario(usuario):
 def usuario_tem_acesso_farmacia(usuario, farmacia_id):
     farmacias = farmacias_do_usuario(usuario)
     return any(f.id == farmacia_id for f in farmacias)
+
+
+def adicionar_mes(data_base, meses):
+    mes = data_base.month - 1 + meses
+    ano = data_base.year + mes // 12
+    mes = mes % 12 + 1
+    dia = min(data_base.day, monthrange(ano, mes)[1])
+    return date(ano, mes, dia)
+
+
+def gerar_nome_parcela(nome_base, numero, total):
+    if total <= 1:
+        return nome_base
+    return f"{nome_base} ({numero}/{total})"
 
 
 @boletos_bp.route("/")
@@ -77,38 +92,63 @@ def novo_boleto():
         valor_pago = request.form.get("valor_pago", "").replace(",", ".").strip()
         observacao = request.form.get("observacao", "").strip()
 
+        parcelas = request.form.get("parcelas", type=int) or 1
+        primeira_data_parcela = request.form.get("primeira_data_parcela", "").strip()
+
         if not farmacia_id or not empresa_nome or not data_vencimento:
             flash("Preencha os campos obrigatórios.", "danger")
             return render_template("boleto_form.html", farmacias=farmacias, boleto=None)
+
+        if parcelas < 1:
+            parcelas = 1
 
         if not usuario_tem_acesso_farmacia(current_user, farmacia_id):
             flash("Você não tem acesso a essa farmácia.", "danger")
             return redirect(url_for("boletos.listar_boletos"))
 
-        boleto = Boleto(
-            farmacia_id=farmacia_id,
-            empresa_nome=empresa_nome,
-            descricao=descricao,
-            valor_original=float(valor_original or 0),
-            data_vencimento=datetime.strptime(data_vencimento, "%Y-%m-%d").date(),
-            observacao=observacao
-        )
+        valor_total_digitado = float(valor_original or 0)
+        valor_parcela = round(valor_total_digitado / parcelas, 2)
+        diferenca = round(valor_total_digitado - (valor_parcela * parcelas), 2)
 
-        if data_pagamento:
-            boleto.data_pagamento = datetime.strptime(data_pagamento, "%Y-%m-%d").date()
+        data_base = datetime.strptime(
+            primeira_data_parcela if primeira_data_parcela else data_vencimento,
+            "%Y-%m-%d"
+        ).date()
 
-        if valor_pago:
-            boleto.valor_pago = float(valor_pago)
+        for i in range(parcelas):
+            valor_atual = valor_parcela
+            if i == parcelas - 1:
+                valor_atual = round(valor_atual + diferenca, 2)
 
-        boleto.preparar()
+            boleto = Boleto(
+                farmacia_id=farmacia_id,
+                empresa_nome=gerar_nome_parcela(empresa_nome, i + 1, parcelas),
+                descricao=descricao,
+                valor_original=float(valor_atual),
+                data_vencimento=adicionar_mes(data_base, i),
+                observacao=observacao
+            )
 
-        if boleto.valor_pago is None and boleto.status == "pago":
-            boleto.valor_pago = boleto.valor_total
+            if parcelas == 1 and data_pagamento:
+                boleto.data_pagamento = datetime.strptime(data_pagamento, "%Y-%m-%d").date()
 
-        db.session.add(boleto)
+            if parcelas == 1 and valor_pago:
+                boleto.valor_pago = float(valor_pago)
+
+            boleto.preparar()
+
+            if boleto.valor_pago is None and boleto.status == "pago":
+                boleto.valor_pago = boleto.valor_total
+
+            db.session.add(boleto)
+
         db.session.commit()
 
-        flash("Boleto cadastrado com sucesso.", "success")
+        if parcelas > 1:
+            flash("Boletos parcelados cadastrados com sucesso.", "success")
+        else:
+            flash("Boleto cadastrado com sucesso.", "success")
+
         return redirect(url_for("boletos.listar_boletos"))
 
     return render_template("boleto_form.html", farmacias=farmacias, boleto=None)

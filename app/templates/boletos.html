@@ -3,17 +3,172 @@
 {% block title %}Boletos | Financeiro Farm{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<style>
+.page-header-premium {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.page-header-premium h1 {
+    margin: 0;
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.page-header-premium p {
+    margin: 6px 0 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.premium-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    margin-bottom: 18px;
+}
+
+.premium-table-wrap {
+    overflow-x: auto;
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.premium-table thead th {
+    background: #0f172a;
+    color: #ffffff;
+    text-align: left;
+    padding: 14px 12px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.premium-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 13px;
+    color: #334155;
+    vertical-align: top;
+}
+
+.premium-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.empresa-bloco {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.empresa-bloco strong {
+    color: #0f172a;
+    font-size: 14px;
+}
+
+.empresa-bloco small {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.badge-soft {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    width: fit-content;
+}
+
+.badge-soft.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-soft.danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.badge-soft.warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-soft.info {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.actions-column-premium {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 190px;
+}
+
+.pay-form-premium {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 10px;
+}
+
+.money-strong {
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.filters-inline-premium {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-actions-inline {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tag-parcela {
+    margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+    .filters-inline-premium {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="page-header-premium">
     <div>
         <h1>Boletos</h1>
-        <p>Controle de contas a pagar, vencidas e pagas</p>
+        <p>Controle de contas a pagar, vencidas, pagas e parceladas</p>
     </div>
 
     <a href="{{ url_for('boletos.novo_boleto') }}" class="btn btn-primary">+ Novo Boleto</a>
 </div>
 
-<div class="filter-card">
-    <form method="GET" class="filters-inline">
+<div class="premium-card">
+    <form method="GET" class="filters-inline-premium">
         <div class="form-group">
             <label>Farmácia</label>
             <select name="farmacia_id">
@@ -36,82 +191,105 @@
             </select>
         </div>
 
-        <div class="form-actions">
+        <div class="form-actions-inline">
             <button type="submit" class="btn btn-primary">Filtrar</button>
             <a href="{{ url_for('boletos.listar_boletos') }}" class="btn btn-secondary">Limpar</a>
         </div>
     </form>
 </div>
 
-<div class="table-card">
-    <table>
-        <thead>
-            <tr>
-                <th>Farmácia</th>
-                <th>Empresa</th>
-                <th>Vencimento</th>
-                <th>Pagamento</th>
-                <th>Valor Original</th>
-                <th>Juros</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for boleto in boletos %}
-            <tr>
-                <td>{{ boleto.farmacia.nome_fantasia }}</td>
-                <td>{{ boleto.empresa_nome }}</td>
-                <td>{{ boleto.data_vencimento.strftime('%d/%m/%Y') }}</td>
-                <td>
-                    {% if boleto.data_pagamento %}
-                        {{ boleto.data_pagamento.strftime('%d/%m/%Y') }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>R$ {{ "%.2f"|format(boleto.valor_original) }}</td>
-                <td>R$ {{ "%.2f"|format(boleto.juros or 0) }}</td>
-                <td>R$ {{ "%.2f"|format(boleto.valor_total or boleto.valor_original) }}</td>
-                <td>
-                    {% if boleto.status == 'pago' %}
-                        <span class="badge success">Pago</span>
-                    {% elif boleto.status == 'vencido' %}
-                        <span class="badge danger">Vencido</span>
-                    {% else %}
-                        {% set dias = (boleto.data_vencimento - hoje).days if hoje else 999 %}
-                        {% if dias >= 0 and dias <= 2 %}
-                            <span class="badge warning">Vence em breve</span>
+<div class="premium-card">
+    <div class="premium-table-wrap">
+        <table class="premium-table">
+            <thead>
+                <tr>
+                    <th>Farmácia</th>
+                    <th>Empresa</th>
+                    <th>Vencimento</th>
+                    <th>Pagamento</th>
+                    <th>Valor Original</th>
+                    <th>Juros</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for boleto in boletos %}
+                {% set parcelado = '(' in boleto.empresa_nome and '/' in boleto.empresa_nome %}
+                <tr>
+                    <td>{{ boleto.farmacia.nome_fantasia }}</td>
+
+                    <td>
+                        <div class="empresa-bloco">
+                            <strong>{{ boleto.empresa_nome }}</strong>
+
+                            {% if boleto.descricao %}
+                                <small>{{ boleto.descricao }}</small>
+                            {% endif %}
+
+                            {% if parcelado %}
+                                <div class="tag-parcela">
+                                    <span class="badge-soft info">Parcelado</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td>{{ boleto.data_vencimento.strftime('%d/%m/%Y') }}</td>
+
+                    <td>
+                        {% if boleto.data_pagamento %}
+                            {{ boleto.data_pagamento.strftime('%d/%m/%Y') }}
                         {% else %}
-                            <span class="badge warning">A Vencer</span>
+                            -
                         {% endif %}
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="actions-column">
-                        <a href="{{ url_for('boletos.editar_boleto', boleto_id=boleto.id) }}" class="btn btn-small btn-secondary">Editar</a>
+                    </td>
 
-                        {% if boleto.status != 'pago' %}
-                        <form method="POST" action="{{ url_for('boletos.pagar_boleto', boleto_id=boleto.id) }}" class="pay-form">
-                            <input type="date" name="data_pagamento" required>
-                            <input type="text" name="valor_pago" placeholder="Valor pago">
-                            <button type="submit" class="btn btn-small btn-success">Pagar</button>
-                        </form>
+                    <td class="money-strong">R$ {{ "%.2f"|format(boleto.valor_original) }}</td>
+                    <td>R$ {{ "%.2f"|format(boleto.juros or 0) }}</td>
+                    <td class="money-strong">R$ {{ "%.2f"|format(boleto.valor_total or boleto.valor_original) }}</td>
+
+                    <td>
+                        {% if boleto.status == 'pago' %}
+                            <span class="badge-soft success">Pago</span>
+                        {% elif boleto.status == 'vencido' %}
+                            <span class="badge-soft danger">Vencido</span>
+                        {% else %}
+                            {% set dias = (boleto.data_vencimento - hoje).days if hoje else 999 %}
+                            {% if dias >= 0 and dias <= 2 %}
+                                <span class="badge-soft warning">Vence em breve</span>
+                            {% else %}
+                                <span class="badge-soft warning">A Vencer</span>
+                            {% endif %}
                         {% endif %}
+                    </td>
 
-                        <form method="POST" action="{{ url_for('boletos.excluir_boleto', boleto_id=boleto.id) }}" onsubmit="return confirm('Deseja excluir este boleto?');">
-                            <button type="submit" class="btn btn-small btn-danger">Excluir</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="9">Nenhum boleto cadastrado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                    <td>
+                        <div class="actions-column-premium">
+                            <a href="{{ url_for('boletos.editar_boleto', boleto_id=boleto.id) }}" class="btn btn-small btn-secondary">Editar</a>
+
+                            {% if boleto.status != 'pago' %}
+                            <form method="POST" action="{{ url_for('boletos.pagar_boleto', boleto_id=boleto.id) }}" class="pay-form-premium">
+                                <input type="date" name="data_pagamento" required>
+                                <input type="text" name="valor_pago" placeholder="Valor pago">
+                                <button type="submit" class="btn btn-small btn-success">Pagar</button>
+                            </form>
+                            {% endif %}
+
+                            <form method="POST" action="{{ url_for('boletos.excluir_boleto', boleto_id=boleto.id) }}" onsubmit="return confirm('Deseja excluir este boleto?');">
+                                <button type="submit" class="btn btn-small btn-danger">Excluir</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9">Nenhum boleto cadastrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
