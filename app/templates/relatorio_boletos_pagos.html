@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Relatório de Boletos Pagos | Financeiro Farm{% endblock %}
+
+{% block content %}
+<style>
+.relatorio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.relatorio-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.relatorio-subtitle {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.card-resumo {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.card-resumo span {
+    display: block;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.card-resumo strong {
+    font-size: 28px;
+    color: #0f172a;
+}
+
+.card-blue { border-left: 6px solid #2563eb; }
+.card-orange { border-left: 6px solid #f59e0b; }
+.card-green { border-left: 6px solid #16a34a; }
+
+.table-wrap {
+    margin-top: 24px;
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.table-relatorio {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-relatorio th,
+.table-relatorio td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.table-relatorio thead th {
+    background: #1e293b;
+    color: #fff;
+}
+</style>
+
+<div class="relatorio-header">
+    <div>
+        <h1 class="relatorio-title">📄 Relatório de Boletos Pagos</h1>
+        <p class="relatorio-subtitle">
+            Veja quanto foi pago em boletos, juros e valor total por empresa e período.
+        </p>
+    </div>
+</div>
+
+<div class="form-card">
+    <form method="GET" class="form-grid three-columns">
+        <div class="form-group">
+            <label>Empresa / Farmácia</label>
+            <select name="farmacia_id">
+                <option value="">Todas</option>
+                {% for farmacia in farmacias %}
+                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
+                        {{ farmacia.nome_fantasia }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Data Inicial</label>
+            <input type="date" name="data_inicio" value="{{ data_inicio }}">
+        </div>
+
+        <div class="form-group">
+            <label>Data Final</label>
+            <input type="date" name="data_fim" value="{{ data_fim }}">
+        </div>
+
+        <div class="form-actions full">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="{{ url_for('relatorios.relatorio_boletos_pagos') }}" class="btn btn-secondary">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="cards-grid">
+    <div class="card-resumo card-blue">
+        <span>💰 Valor Principal</span>
+        <strong>R$ {{ "%.2f"|format(total_principal) }}</strong>
+    </div>
+
+    <div class="card-resumo card-orange">
+        <span>⚠️ Juros Pagos</span>
+        <strong>R$ {{ "%.2f"|format(total_juros) }}</strong>
+    </div>
+
+    <div class="card-resumo card-green">
+        <span>✅ Total Pago</span>
+        <strong>R$ {{ "%.2f"|format(total_pago) }}</strong>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <table class="table-relatorio">
+        <thead>
+            <tr>
+                <th>Empresa</th>
+                <th>Farmácia</th>
+                <th>Descrição</th>
+                <th>Vencimento</th>
+                <th>Pagamento</th>
+                <th>Valor Principal</th>
+                <th>Juros Pago</th>
+                <th>Total Pago</th>
+                <th>Observação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if detalhes_boletos %}
+                {% for b in detalhes_boletos %}
+                <tr>
+                    <td>{{ b.empresa }}</td>
+                    <td>{{ b.farmacia }}</td>
+                    <td>{{ b.descricao }}</td>
+                    <td>{{ b.vencimento }}</td>
+                    <td>{{ b.pagamento }}</td>
+                    <td>{{ b.valor_principal }}</td>
+                    <td>{{ b.juros_pago }}</td>
+                    <td>{{ b.valor_total_pago }}</td>
+                    <td>{{ b.observacao }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="9">Nenhum boleto pago encontrado nesse período.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

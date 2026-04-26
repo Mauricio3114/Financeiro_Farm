@@ -331,7 +331,7 @@ def dashboard():
 
         top_centros = sorted(centros.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # 🔥 AGENDA GLOBAL (sem vínculo com farmácia)
+    # 🔔 AGENDA GLOBAL — alertar tarefas, ligações, avisos e eventos pendentes
     eventos_agenda = AgendaEvento.query.filter(
         AgendaEvento.status == "pendente"
     ).all()
@@ -342,11 +342,11 @@ def dashboard():
     for evento in eventos_agenda:
         alerta = evento.nivel_alerta()
 
-        # mantém compatibilidade com dashboard.html atual
         evento.farmacia = SimpleNamespace(nome_fantasia="Agenda Geral")
 
         if alerta == "hoje":
             agenda_hoje += 1
+
         if alerta in ["hoje", "urgente", "proximo", "atrasado"]:
             agenda_urgente += 1
             eventos_alerta.append(evento)
@@ -354,7 +354,7 @@ def dashboard():
     agenda_proximos = sorted(
         eventos_alerta,
         key=lambda e: (e.data_exibicao(), e.hora_evento or "")
-    )[:5]
+    )
 
     receita_bruta = float(total_vendas)
     despesas_operacionais = float(total_despesas + total_despesas_motos + total_despesas_fixas)

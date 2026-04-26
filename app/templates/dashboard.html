@@ -234,7 +234,15 @@
 
 <div class="dashboard-top-actions">
     <a href="{{ url_for('agenda.listar_agenda') }}" class="agenda-top-badge-link">
-        <div class="agenda-top-badge {% if agenda_hoje > 0 or agenda_urgente > 0 %}urgente pulse-badge{% elif agenda_total_pendente > 0 %}proximo{% else %}normal{% endif %}">
+        <div class="agenda-top-badge 
+            {% if agenda_hoje > 0 or agenda_urgente > 0 %}
+                urgente pulse-badge
+            {% elif agenda_total_pendente > 0 %}
+                proximo
+            {% else %}
+                normal
+            {% endif %}
+        ">
             <span>Agenda</span>
             <span class="contador">
                 {% if agenda_urgente > 0 %}
@@ -302,12 +310,17 @@
 </div>
 {% endif %}
 
-{% if agenda_urgente > 0 %}
+{% if agenda_total_pendente > 0 %}
 <div class="agenda-alert-card pulse-box">
     <div class="agenda-alert-header">
         <div>
             <h3>Agenda em alerta</h3>
-            <p>Você tem {{ agenda_urgente }} evento(s) próximo(s) ou urgente(s)</p>
+            <p>
+            Você tem {{ agenda_total_pendente }} evento(s) pendente(s)
+            {% if agenda_urgente > 0 %}
+            — {{ agenda_urgente }} precisam de atenção
+            {% endif %}
+            </p>
         </div>
         <a href="{{ url_for('agenda.listar_agenda') }}" class="btn btn-primary">Abrir Agenda</a>
     </div>

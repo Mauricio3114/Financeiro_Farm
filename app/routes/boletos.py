@@ -221,12 +221,13 @@ def pagar_boleto(boleto_id):
         return redirect(url_for("boletos.listar_boletos"))
 
     boleto.data_pagamento = datetime.strptime(data_pagamento, "%Y-%m-%d").date()
-    boleto.preparar()
 
     if valor_pago:
         boleto.valor_pago = float(valor_pago)
     else:
-        boleto.valor_pago = boleto.valor_total
+        boleto.valor_pago = float(boleto.valor_original or 0)
+
+    boleto.preparar()
 
     db.session.commit()
 

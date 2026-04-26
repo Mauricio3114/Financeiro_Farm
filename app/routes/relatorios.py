@@ -263,10 +263,17 @@ def relatorio_financeiro_excel():
 @relatorios_bp.route("/financeiro-completo")
 @login_required
 def relatorio_financeiro_completo():
-    farmacia_ids = get_filtro_ids()
     farmacias, filtro_farmacia_id = get_farmacias_e_filtro()
+
     data_inicio = parse_date(request.args.get("data_inicio"))
     data_fim = parse_date(request.args.get("data_fim"))
+
+    farmacia_ids_selecionadas = request.args.getlist("farmacia_ids")
+
+    if farmacia_ids_selecionadas:
+        farmacia_ids = [int(fid) for fid in farmacia_ids_selecionadas if fid.isdigit()]
+    else:
+        farmacia_ids = get_filtro_ids()
 
     if not farmacia_ids:
         flash("Nenhuma farmácia encontrada.", "danger")
@@ -403,6 +410,7 @@ def relatorio_financeiro_completo():
         lucro=lucro,
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
+        farmacia_ids_selecionadas=farmacia_ids,
         data_inicio=request.args.get("data_inicio", ""),
         data_fim=request.args.get("data_fim", ""),
         detalhes_vendas=detalhes_vendas,
@@ -1201,4 +1209,67 @@ def relatorio_boletos_receber_pdf():
         formatar_periodo(data_inicio, data_fim),
         secoes,
         "relatorio_boletos_receber.pdf"
+    )
+
+
+@relatorios_bp.route("/boletos-pagos")
+@login_required
+def relatorio_boletos_pagos():
+    farmacias, filtro_farmacia_id = get_farmacias_e_filtro()
+
+    farmacia_id = request.args.get("farmacia_id", type=int)
+    data_inicio = parse_date(request.args.get("data_inicio"))
+    data_fim = parse_date(request.args.get("data_fim"))
+
+    if farmacia_id:
+        farmacia_ids = [farmacia_id]
+    else:
+        farmacia_ids = get_filtro_ids()
+
+    if not farmacia_ids:
+        flash("Nenhuma farmácia encontrada.", "danger")
+        return redirect(url_for("dashboard.dashboard"))
+
+    boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
+
+    for b in boletos:
+        b.preparar()
+
+    boletos = [b for b in boletos if b.status == "pago"]
+
+    boletos = aplicar_filtro_periodo_lista(
+        boletos,
+        "data_pagamento",
+        data_inicio,
+        data_fim
+    )
+
+    total_principal = sum(b.valor_original or 0 for b in boletos)
+    total_juros = sum(b.juros or 0 for b in boletos)
+    total_pago = sum(b.valor_pago or b.valor_total or 0 for b in boletos)
+
+    detalhes_boletos = []
+    for b in boletos:
+        detalhes_boletos.append({
+            "empresa": b.empresa_nome,
+            "farmacia": b.farmacia.nome_fantasia if b.farmacia else "-",
+            "descricao": b.descricao or "-",
+            "vencimento": texto_data(b.data_vencimento),
+            "pagamento": texto_data(b.data_pagamento),
+            "valor_principal": moeda(b.valor_original),
+            "juros_pago": moeda(b.juros),
+            "valor_total_pago": moeda(b.valor_pago or b.valor_total),
+            "observacao": b.observacao or "-"
+        })
+
+    return render_template(
+        "relatorio_boletos_pagos.html",
+        farmacias=farmacias,
+        filtro_farmacia_id=farmacia_id,
+        data_inicio=request.args.get("data_inicio", ""),
+        data_fim=request.args.get("data_fim", ""),
+        total_principal=total_principal,
+        total_juros=total_juros,
+        total_pago=total_pago,
+        detalhes_boletos=detalhes_boletos
     )

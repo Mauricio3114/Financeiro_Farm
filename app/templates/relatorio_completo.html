@@ -141,6 +141,26 @@
 .relatorio-table tbody tr:hover {
     background: #f8fafc;
 }
+
+/* NOVO CSS (ACRESCENTADO) */
+.farmacias-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.farmacia-item {
+    background: #f1f5f9;
+    padding: 7px 11px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
 </style>
 
 <div class="relatorio-header">
@@ -150,7 +170,7 @@
     </div>
 
     <div class="relatorio-toolbar">
-        <a href="{{ url_for('relatorios.relatorio_financeiro_completo_pdf', data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'), farmacia_id=request.args.get('farmacia_id')) }}"
+        <a href="{{ url_for('relatorios.relatorio_financeiro_completo_pdf', data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim')) }}"
            class="btn btn-danger">
             PDF
         </a>
@@ -159,16 +179,29 @@
 
 <div class="form-card">
     <form method="GET" class="form-grid three-columns">
-        <div class="form-group">
-            <label>Farmácia</label>
-            <select name="farmacia_id">
-                <option value="">Todas</option>
+
+        <!-- NOVO FILTRO MULTI -->
+        <div class="form-group full">
+            <label>Farmácias</label>
+
+            <label class="farmacia-item">
+                <input type="checkbox" id="marcarTodas"
+                    {% if not request.args.getlist('farmacia_ids') %}checked{% endif %}>
+                <strong>Todas</strong>
+            </label>
+
+            <div class="farmacias-box">
                 {% for farmacia in farmacias %}
-                    <option value="{{ farmacia.id }}" {% if filtro_farmacia_id == farmacia.id %}selected{% endif %}>
-                        {{ farmacia.nome_fantasia }}
-                    </option>
+                <label class="farmacia-item">
+                    <input type="checkbox" name="farmacia_ids" value="{{ farmacia.id }}"
+                        {% if not request.args.getlist('farmacia_ids') or farmacia.id|string in request.args.getlist('farmacia_ids') %}
+                            checked
+                        {% endif %}
+                    >
+                    {{ farmacia.nome_fantasia }}
+                </label>
                 {% endfor %}
-            </select>
+            </div>
         </div>
 
         <div class="form-group">
@@ -187,6 +220,23 @@
         </div>
     </form>
 </div>
+
+<script>
+const marcarTodas = document.getElementById("marcarTodas");
+const checkboxesFarmacias = document.querySelectorAll('input[name="farmacia_ids"]');
+
+if (marcarTodas) {
+    marcarTodas.addEventListener("change", function() {
+        checkboxesFarmacias.forEach(cb => cb.checked = this.checked);
+    });
+
+    checkboxesFarmacias.forEach(cb => {
+        cb.addEventListener("change", function() {
+            marcarTodas.checked = Array.from(checkboxesFarmacias).every(item => item.checked);
+        });
+    });
+}
+</script>
 
 <div class="relatorio-card-grid">
     <div class="relatorio-card blue">
@@ -234,40 +284,6 @@
     <h2>🔥 Resultado Final</h2>
     <h1>R$ {{ "%.2f"|format(lucro) }}</h1>
 </div>
-
-{% macro tabela_detalhe(titulo, linhas) %}
-<div class="relatorio-section">
-    <h3>{{ titulo }}</h3>
-    <div class="relatorio-table-wrap">
-        <table class="relatorio-table">
-            <thead>
-                <tr>
-                    {% if linhas %}
-                        {% for chave in linhas[0].keys() %}
-                            <th>{{ chave }}</th>
-                        {% endfor %}
-                    {% else %}
-                        <th>Sem dados</th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% if linhas %}
-                    {% for linha in linhas %}
-                        <tr>
-                            {% for valor in linha.values() %}
-                                <td>{{ valor }}</td>
-                            {% endfor %}
-                        </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr><td>Nenhum registro encontrado.</td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endmacro %}
 
 {{ tabela_detalhe('Detalhamento de Vendas', detalhes_vendas) }}
 {{ tabela_detalhe('Detalhamento de Despesas Gerais', detalhes_despesas) }}

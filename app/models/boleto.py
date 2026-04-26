@@ -25,25 +25,32 @@ class Boleto(db.Model):
 
     farmacia = db.relationship("Farmacia", back_populates="boletos")
 
-    def calcular_juros(self, valor_juros_dia=2.0):
-        if self.data_pagamento and self.data_pagamento > self.data_vencimento:
-            dias_atraso = (self.data_pagamento - self.data_vencimento).days
-            self.juros = float(dias_atraso * valor_juros_dia)
-        else:
-            self.juros = 0.0
+    def calcular_juros(self):
+        valor_original = float(self.valor_original or 0)
 
-        self.valor_total = float(self.valor_original + self.juros)
+        if self.data_pagamento:
+            if self.valor_pago is not None:
+                valor_pago = float(self.valor_pago or 0)
+            else:
+                valor_pago = valor_original
+                self.valor_pago = valor_pago
+
+            self.juros = round(max(valor_pago - valor_original, 0), 2)
+            self.valor_total = round(valor_pago, 2)
+            return
+
+        self.juros = 0.0
+        self.valor_total = round(valor_original, 2)
 
     def atualizar_status(self):
         hoje = date.today()
 
         if self.data_pagamento:
             self.status = "pago"
+        elif self.data_vencimento < hoje:
+            self.status = "vencido"
         else:
-            if self.data_vencimento < hoje:
-                self.status = "vencido"
-            else:
-                self.status = "a_vencer"
+            self.status = "a_vencer"
 
     def preparar(self):
         self.calcular_juros()
