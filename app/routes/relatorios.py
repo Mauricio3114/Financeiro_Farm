@@ -279,6 +279,8 @@ def relatorio_financeiro_completo():
         flash("Nenhuma farmácia encontrada.", "danger")
         return redirect(url_for("dashboard.dashboard"))
 
+    farmacia_ids_str = [str(fid) for fid in farmacia_ids]
+
     boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
     despesas = Despesa.query.filter(Despesa.farmacia_id.in_(farmacia_ids)).all()
     vendas = VendaDiaria.query.filter(VendaDiaria.farmacia_id.in_(farmacia_ids)).all()
@@ -411,6 +413,7 @@ def relatorio_financeiro_completo():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         farmacia_ids_selecionadas=farmacia_ids,
+        farmacia_ids_str=farmacia_ids_str,
         data_inicio=request.args.get("data_inicio", ""),
         data_fim=request.args.get("data_fim", ""),
         detalhes_vendas=detalhes_vendas,

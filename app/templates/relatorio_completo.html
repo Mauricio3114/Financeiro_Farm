@@ -186,7 +186,7 @@
 
             <label class="farmacia-item">
                 <input type="checkbox" id="marcarTodas"
-                    {% if not request.args.getlist('farmacia_ids') %}checked{% endif %}>
+                    {% if farmacias|length == farmacia_ids_str|length %}checked{% endif %}>
                 <strong>Todas</strong>
             </label>
 
@@ -194,10 +194,7 @@
                 {% for farmacia in farmacias %}
                 <label class="farmacia-item">
                     <input type="checkbox" name="farmacia_ids" value="{{ farmacia.id }}"
-                        {% if not request.args.getlist('farmacia_ids') or farmacia.id|string in request.args.getlist('farmacia_ids') %}
-                            checked
-                        {% endif %}
-                    >
+                        {% if farmacia.id|string in farmacia_ids_str %}checked{% endif %}>
                     {{ farmacia.nome_fantasia }}
                 </label>
                 {% endfor %}
