@@ -282,6 +282,40 @@ if (marcarTodas) {
     <h1>R$ {{ "%.2f"|format(lucro) }}</h1>
 </div>
 
+{% macro tabela_detalhe(titulo, linhas) %}
+<div class="relatorio-section">
+    <h3>{{ titulo }}</h3>
+    <div class="relatorio-table-wrap">
+        <table class="relatorio-table">
+            <thead>
+                <tr>
+                    {% if linhas %}
+                        {% for chave in linhas[0].keys() %}
+                            <th>{{ chave }}</th>
+                        {% endfor %}
+                    {% else %}
+                        <th>Sem dados</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if linhas %}
+                    {% for linha in linhas %}
+                        <tr>
+                            {% for valor in linha.values() %}
+                                <td>{{ valor }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td>Nenhum registro encontrado.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endmacro %}
+
 {{ tabela_detalhe('Detalhamento de Vendas', detalhes_vendas) }}
 {{ tabela_detalhe('Detalhamento de Despesas Gerais', detalhes_despesas) }}
 {{ tabela_detalhe('Detalhamento de Despesas das Motos', detalhes_motos) }}
