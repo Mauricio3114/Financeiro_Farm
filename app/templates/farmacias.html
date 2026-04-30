@@ -44,7 +44,18 @@
                 </td>
                 {% if current_user.perfil == 'admin' %}
                 <td>
-                    <a href="{{ url_for('farmacias.editar_farmacia', farmacia_id=farmacia.id) }}" class="btn btn-small btn-secondary">Editar</a>
+                    <a href="{{ url_for('farmacias.editar_farmacia', farmacia_id=farmacia.id) }}" class="btn btn-small btn-secondary">
+                        Editar
+                    </a>
+
+                    <form method="POST"
+                        action="{{ url_for('farmacias.deletar_farmacia', farmacia_id=farmacia.id) }}"
+                        style="display:inline;"
+                        onsubmit="return confirm('Tem certeza que deseja deletar esta farmácia? Isso apagará também os dados vinculados a ela.');">
+                        <button type="submit" class="btn btn-small btn-danger">
+                            Deletar
+                        </button>
+                    </form>
                 </td>
                 {% endif %}
             </tr>
