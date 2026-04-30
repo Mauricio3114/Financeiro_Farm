@@ -4,13 +4,39 @@
     <meta charset="UTF-8">
     <title>{% block title %}Financeiro Farm{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     <style>
-        .menu-group {
-            margin-bottom: 8px;
+        .sidebar {
+            background: linear-gradient(180deg, #071127, #0f172a);
+            border-right: 1px solid rgba(255,255,255,0.08);
         }
 
+        .brand {
+            padding-bottom: 18px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.10);
+        }
+
+        .brand h2 {
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .brand p {
+            color: #cbd5e1;
+            font-size: 13px;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu > a,
         .menu-toggle {
             width: 100%;
             border: none;
@@ -18,26 +44,44 @@
             text-align: left;
             text-decoration: none;
             color: #f8fafc;
-            background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-            padding: 14px 12px;
+            background: rgba(255,255,255,0.06);
+            padding: 13px 12px;
             border-radius: 14px;
             transition: 0.2s ease;
-            font-weight: 700;
-            font-size: 14px;
-            border: 1px solid rgba(255,255,255,0.05);
+            font-weight: 800;
+            font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.06);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 8px;
         }
 
+        .menu > a:hover,
         .menu-toggle:hover {
             transform: translateX(3px);
-            background: linear-gradient(90deg, rgba(59,130,246,0.45), rgba(59,130,246,0.18));
+            background: rgba(37,99,235,0.28);
+            color: #fff;
+        }
+
+        .menu-icon {
+            margin-right: 8px;
+        }
+
+        .menu-left {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .menu-group {
+            margin-bottom: 2px;
         }
 
         .menu-toggle .arrow {
-            font-size: 12px;
+            font-size: 11px;
             transition: transform 0.2s ease;
+            opacity: 0.85;
         }
 
         .menu-group.open .menu-toggle .arrow {
@@ -47,9 +91,8 @@
         .submenu {
             display: none;
             flex-direction: column;
-            gap: 8px;
-            padding-top: 8px;
-            padding-left: 12px;
+            gap: 7px;
+            padding: 8px 0 4px 14px;
         }
 
         .menu-group.open .submenu {
@@ -59,26 +102,35 @@
         .submenu a {
             text-decoration: none;
             color: #dbeafe;
-            background: rgba(255,255,255,0.05);
-            padding: 11px 12px;
+            background: rgba(255,255,255,0.045);
+            padding: 10px 11px;
             border-radius: 12px;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 700;
             transition: 0.2s ease;
-            border: 1px solid rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.035);
         }
 
         .submenu a:hover {
-            background: rgba(59,130,246,0.18);
+            background: rgba(59,130,246,0.22);
             color: #ffffff;
             transform: translateX(2px);
         }
 
         .menu-divider {
             height: 1px;
-            background: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.10);
             margin: 10px 0;
             border-radius: 999px;
+        }
+
+        .logout-link {
+            background: rgba(239,68,68,0.16) !important;
+            border-color: rgba(239,68,68,0.25) !important;
+        }
+
+        .logout-link:hover {
+            background: rgba(239,68,68,0.35) !important;
         }
 
         @media (max-width: 900px) {
@@ -88,6 +140,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="layout">
         {% if current_user.is_authenticated %}
@@ -98,72 +151,80 @@
             </div>
 
             <nav class="menu">
-                <a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('farmacias.listar_farmacias') }}">Farmácias</a>
 
-                {% if current_user.perfil == 'admin' %}
-                <a href="{{ url_for('usuarios.listar_usuarios') }}">Usuários</a>
-                {% endif %}
+                <a href="{{ url_for('dashboard.dashboard') }}">
+                    <span class="menu-left"><span class="menu-icon">📊</span>Dashboard</span>
+                </a>
 
-                <div class="menu-group open">
+                <div class="menu-group">
                     <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
-                        <span>Financeiro</span>
+                        <span class="menu-left"><span class="menu-icon">🏥</span>Cadastros</span>
                         <span class="arrow">▶</span>
                     </button>
                     <div class="submenu">
+                        <a href="{{ url_for('farmacias.listar_farmacias') }}">Farmácias</a>
 
-                        <div class="menu-group open">
-                            <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
-                                <span>Boletos</span>
-                                <span class="arrow">▶</span>
-                            </button>
-                            <div class="submenu">
-                                <a href="{{ url_for('boletos.listar_boletos') }}">A Pagar</a>
-                                <a href="{{ url_for('contas_receber.listar_contas_receber') }}">A Receber</a>
-                            </div>
-                        </div>
+                        {% if current_user.perfil == 'admin' %}
+                        <a href="{{ url_for('usuarios.listar_usuarios') }}">Usuários</a>
+                        {% endif %}
 
-                        <a href="{{ url_for('vendas.listar_vendas') }}">Vendas do Dia</a>
-                        <a href="{{ url_for('caixa.listar_caixa') }}">Fluxo de Caixa</a>
-
-                        <div class="menu-group open">
-                            <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
-                                <span>Relatórios</span>
-                                <span class="arrow">▶</span>
-                            </button>
-                            <div class="submenu">
-                                <a href="{{ url_for('relatorios.relatorio_financeiro_completo') }}">📊 Relatório Geral</a>
-                                <a href="{{ url_for('relatorios.relatorio_vendas') }}">💰 Relatório de Vendas</a>
-                                <a href="{{ url_for('relatorios.relatorio_despesas') }}">💸 Relatório de Despesas</a>
-                                <a href="{{ url_for('relatorios.relatorio_despesas_motos') }}">🏍️ Relatório de Despesas das Motos</a>
-                                <a href="{{ url_for('relatorios.relatorio_despesas_fixas') }}">📌 Relatório de Despesas Fixas</a>
-                                <a href="{{ url_for('relatorios.relatorio_boletos_pagar') }}">📄 Relatório de Boletos a Pagar</a>
-                                <a href="{{ url_for('relatorios.relatorio_boletos_receber') }}">🧾 Relatório de Boletos a Receber</a>
-                                <a href="{{ url_for('relatorios.relatorio_boletos_pagos') }}">Boletos Pagos</a>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
-                <a href="{{ url_for('agenda.listar_agenda') }}">Agenda</a>
-                <a href="{{ url_for('entregadores.listar_entregadores') }}">Entregadores</a>
-                <a href="{{ url_for('despesas.listar_categorias') }}">Categorias de Despesa</a>
-
-                <div class="menu-group open">
-                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
-                        <span>Motos</span>
-                        <span class="arrow">▶</span>
-                    </button>
-                    <div class="submenu">
+                        <a href="{{ url_for('entregadores.listar_entregadores') }}">Entregadores</a>
                         <a href="{{ url_for('motos.listar_motos') }}">Motos</a>
-                        <a href="{{ url_for('despesas_motos.listar_despesas_motos') }}">Despesas das Motos</a>
+                        <a href="{{ url_for('despesas.listar_categorias') }}">Categorias de Despesa</a>
                     </div>
                 </div>
+
+                <div class="menu-group">
+                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                        <span class="menu-left"><span class="menu-icon">💰</span>Financeiro</span>
+                        <span class="arrow">▶</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="{{ url_for('vendas.listar_vendas') }}">Vendas do Dia</a>
+                        <a href="{{ url_for('despesas.listar_despesas') }}">Despesas</a>
+                        <a href="{{ url_for('despesas_motos.listar_despesas_motos') }}">Despesas das Motos</a>
+                        <a href="{{ url_for('caixa.listar_caixa') }}">Fluxo de Caixa</a>
+                    </div>
+                </div>
+
+                <div class="menu-group">
+                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                        <span class="menu-left"><span class="menu-icon">📄</span>Boletos</span>
+                        <span class="arrow">▶</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="{{ url_for('boletos.listar_boletos') }}">A Pagar</a>
+                        <a href="{{ url_for('contas_receber.listar_contas_receber') }}">A Receber</a>
+                    </div>
+                </div>
+
+                <div class="menu-group open">
+                    <button type="button" class="menu-toggle" onclick="toggleMenu(this)">
+                        <span class="menu-left"><span class="menu-icon">📈</span>Relatórios</span>
+                        <span class="arrow">▶</span>
+                    </button>
+                    <div class="submenu">
+                        <a href="{{ url_for('relatorios.relatorio_financeiro_completo') }}">Relatório Geral</a>
+                        <a href="{{ url_for('relatorios.relatorio_vendas') }}">Relatório de Vendas</a>
+                        <a href="{{ url_for('relatorios.relatorio_despesas') }}">Relatório de Despesas</a>
+                        <a href="{{ url_for('relatorios.relatorio_despesas_motos') }}">Relatório de Motos</a>
+                        <a href="{{ url_for('relatorios.relatorio_despesas_fixas') }}">Relatório de Fixas</a>
+                        <a href="{{ url_for('relatorios.relatorio_boletos_pagar') }}">Boletos a Pagar</a>
+                        <a href="{{ url_for('relatorios.relatorio_boletos_receber') }}">Boletos a Receber</a>
+                        <a href="{{ url_for('relatorios.relatorio_boletos_pagos') }}">Boletos Pagos</a>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('agenda.listar_agenda') }}">
+                    <span class="menu-left"><span class="menu-icon">🔔</span>Agenda</span>
+                </a>
 
                 <div class="menu-divider"></div>
-                <a href="{{ url_for('auth.logout') }}">Sair</a>
+
+                <a href="{{ url_for('auth.logout') }}" class="logout-link">
+                    <span class="menu-left"><span class="menu-icon">🚪</span>Sair</span>
+                </a>
+
             </nav>
         </aside>
         {% endif %}
