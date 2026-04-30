@@ -1,7 +1,20 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
-from app.models import Farmacia, Usuario, UsuarioFarmacia
+from app.models import (
+    Farmacia,
+    Usuario,
+    UsuarioFarmacia,
+    Boleto,
+    Despesa,
+    VendaDiaria,
+    Entregador,
+    Moto,
+    DespesaMoto,
+    ContaReceber,
+    MovimentoCaixa,
+    DespesaFixaLancamento,
+)
 
 farmacias_bp = Blueprint("farmacias", __name__, url_prefix="/farmacias")
 
@@ -122,8 +135,25 @@ def deletar_farmacia(farmacia_id):
 
     farmacia = Farmacia.query.get_or_404(farmacia_id)
 
-    db.session.delete(farmacia)
-    db.session.commit()
+    try:
+        UsuarioFarmacia.query.filter_by(farmacia_id=farmacia.id).delete()
+        DespesaMoto.query.filter_by(farmacia_id=farmacia.id).delete()
+        MovimentoCaixa.query.filter_by(farmacia_id=farmacia.id).delete()
+        ContaReceber.query.filter_by(farmacia_id=farmacia.id).delete()
+        DespesaFixaLancamento.query.filter_by(farmacia_id=farmacia.id).delete()
+        Boleto.query.filter_by(farmacia_id=farmacia.id).delete()
+        Despesa.query.filter_by(farmacia_id=farmacia.id).delete()
+        VendaDiaria.query.filter_by(farmacia_id=farmacia.id).delete()
+        Entregador.query.filter_by(farmacia_id=farmacia.id).delete()
+        Moto.query.filter_by(farmacia_id=farmacia.id).delete()
 
-    flash("Farmácia deletada com sucesso.", "success")
+        db.session.delete(farmacia)
+        db.session.commit()
+
+        flash("Farmácia e todos os dados vinculados foram deletados com sucesso.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao deletar farmácia: {str(e)}", "danger")
+
     return redirect(url_for("farmacias.listar_farmacias"))
