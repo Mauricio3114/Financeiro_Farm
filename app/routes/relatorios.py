@@ -87,9 +87,10 @@ def texto_data(valor):
 
 def build_pdf_detalhado(titulo, periodo, secoes, nome_arquivo):
     buffer = BytesIO()
+
     doc = SimpleDocTemplate(
         buffer,
-        pagesize=landscape(A4),
+        pagesize=A4,  # MODO RETRATO
         leftMargin=20,
         rightMargin=20,
         topMargin=20,
@@ -119,7 +120,7 @@ def build_pdf_detalhado(titulo, periodo, secoes, nome_arquivo):
             ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
         ]))
 
         elementos.append(tabela)
@@ -221,32 +222,165 @@ def relatorio_financeiro_excel():
     despesas = Despesa.query.filter(Despesa.farmacia_id.in_(farmacia_ids)).all()
     vendas = VendaDiaria.query.filter(VendaDiaria.farmacia_id.in_(farmacia_ids)).all()
     despesas_motos = DespesaMoto.query.filter(DespesaMoto.farmacia_id.in_(farmacia_ids)).all()
+    contas = ContaReceber.query.filter(ContaReceber.farmacia_id.in_(farmacia_ids)).all()
+    despesas_fixas = DespesaFixaLancamento.query.filter(DespesaFixaLancamento.farmacia_id.in_(farmacia_ids)).all()
 
     boletos = aplicar_filtro_periodo_lista(boletos, "data_vencimento", data_inicio, data_fim)
     despesas = aplicar_filtro_periodo_lista(despesas, "data_despesa", data_inicio, data_fim)
     vendas = aplicar_filtro_periodo_lista(vendas, "data_venda", data_inicio, data_fim)
     despesas_motos = aplicar_filtro_periodo_lista(despesas_motos, "data_despesa", data_inicio, data_fim)
+    contas = aplicar_filtro_periodo_lista(contas, "data_vencimento", data_inicio, data_fim)
+    despesas_fixas = aplicar_filtro_periodo_lista(despesas_fixas, "data_vencimento", data_inicio, data_fim)
 
-    for boleto in boletos:
-        boleto.preparar()
+    for b in boletos:
+        b.preparar()
+
+    for c in contas:
+        c.preparar()
+
+    for d in despesas_fixas:
+        d.preparar()
+
+    total_vendas = sum(v.total_dia or 0 for v in vendas)
+    total_despesas = sum(d.valor or 0 for d in despesas)
+    total_motos = sum(d.valor or 0 for d in despesas_motos)
+    total_fixas = sum(d.valor or 0 for d in despesas_fixas)
+    total_receber = sum(c.valor or 0 for c in contas if c.status != "recebido")
+    total_recebido = sum((c.valor_recebido or c.valor or 0) for c in contas if c.status == "recebido")
+    total_boletos_aberto = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
+    total_boletos_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
+    lucro = total_vendas - (total_despesas + total_motos + total_fixas)
 
     wb = Workbook()
-    ws = wb.active
-    ws.title = "Resumo Financeiro"
 
+    # ABA RESUMO
+    ws = wb.active
+    ws.title = "Resumo"
     ws.append(["Indicador", "Valor"])
-    ws.append(["Boletos Pagos", sum((b.valor_pago or 0) for b in boletos if b.status == "pago")])
-    ws.append(["Boletos em Aberto", sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])])
-    ws.append(["Despesas Gerais", sum(d.valor or 0 for d in despesas)])
-    ws.append(["Despesas das Motos", sum(d.valor or 0 for d in despesas_motos)])
-    ws.append(["Vendas", sum(v.total_dia or 0 for v in vendas)])
-    ws.append([
-        "Resultado",
-        sum(v.total_dia or 0 for v in vendas) - (sum(d.valor or 0 for d in despesas) + sum(d.valor or 0 for d in despesas_motos))
-    ])
+    ws.append(["Vendas", total_vendas])
+    ws.append(["Despesas Gerais", total_despesas])
+    ws.append(["Despesas das Motos", total_motos])
+    ws.append(["Despesas Fixas", total_fixas])
+    ws.append(["Boletos em Aberto", total_boletos_aberto])
+    ws.append(["Boletos Pagos", total_boletos_pagos])
+    ws.append(["A Receber", total_receber])
+    ws.append(["Recebido", total_recebido])
+    ws.append(["Lucro / Resultado Final", lucro])
 
     ws.column_dimensions["A"].width = 35
     ws.column_dimensions["B"].width = 20
+
+    # ABA VENDAS
+    ws_vendas = wb.create_sheet("Vendas")
+    ws_vendas.append(["Data", "Farmácia", "À Vista", "Vulcabras", "Débito", "Crédito", "Pix", "Total", "Observação"])
+
+    for v in vendas:
+        ws_vendas.append([
+            texto_data(v.data_venda),
+            v.farmacia.nome_fantasia if v.farmacia else "-",
+            v.valor_vista or 0,
+            v.valor_vulcabras or 0,
+            v.valor_debito or 0,
+            v.valor_credito or 0,
+            v.valor_pix or 0,
+            v.total_dia or 0,
+            v.observacao or "-"
+        ])
+
+    # ABA DESPESAS GERAIS
+    ws_despesas = wb.create_sheet("Despesas Gerais")
+    ws_despesas.append(["Data", "Farmácia", "Categoria", "Centro Custo", "Descrição", "Forma Pgto", "Valor", "Observação"])
+
+    for d in despesas:
+        ws_despesas.append([
+            texto_data(d.data_despesa),
+            d.farmacia.nome_fantasia if d.farmacia else "-",
+            d.categoria,
+            d.centro_custo or "-",
+            d.descricao,
+            d.forma_pagamento or "-",
+            d.valor or 0,
+            d.observacao or "-"
+        ])
+
+    # ABA DESPESAS MOTOS
+    ws_motos = wb.create_sheet("Despesas Motos")
+    ws_motos.append(["Data", "Farmácia", "Moto", "Entregador", "Tipo", "Descrição", "Valor", "Observação"])
+
+    for d in despesas_motos:
+        ws_motos.append([
+            texto_data(d.data_despesa),
+            d.farmacia.nome_fantasia if d.farmacia else "-",
+            d.moto.modelo if d.moto else "-",
+            d.entregador.nome if d.entregador else "-",
+            d.tipo_despesa,
+            d.descricao,
+            d.valor or 0,
+            d.observacao or "-"
+        ])
+
+    # ABA DESPESAS FIXAS
+    ws_fixas = wb.create_sheet("Despesas Fixas")
+    ws_fixas.append(["Vencimento", "Pagamento", "Farmácia", "Nome", "Categoria", "Centro Custo", "Status", "Valor", "Observação"])
+
+    for d in despesas_fixas:
+        ws_fixas.append([
+            texto_data(d.data_vencimento),
+            texto_data(d.data_pagamento),
+            d.farmacia.nome_fantasia if d.farmacia else "-",
+            d.nome,
+            d.categoria,
+            d.centro_custo or "-",
+            d.status,
+            d.valor or 0,
+            d.observacao or "-"
+        ])
+
+    # ABA BOLETOS A PAGAR
+    ws_boletos = wb.create_sheet("Boletos a Pagar")
+    ws_boletos.append(["Empresa", "Descrição", "Farmácia", "Vencimento", "Pagamento", "Original", "Juros", "Total", "Pago", "Status", "Observação"])
+
+    for b in boletos:
+        ws_boletos.append([
+            b.empresa_nome,
+            b.descricao or "-",
+            b.farmacia.nome_fantasia if b.farmacia else "-",
+            texto_data(b.data_vencimento),
+            texto_data(b.data_pagamento),
+            b.valor_original or 0,
+            b.juros or 0,
+            b.valor_total or 0,
+            b.valor_pago or 0,
+            b.status,
+            b.observacao or "-"
+        ])
+
+    # ABA BOLETOS A RECEBER
+    ws_receber = wb.create_sheet("Boletos a Receber")
+    ws_receber.append(["Cliente", "Descrição", "Farmácia", "Vencimento", "Recebimento", "Valor", "Valor Recebido", "Status", "Observação"])
+
+    for c in contas:
+        ws_receber.append([
+            c.cliente_nome,
+            c.descricao or "-",
+            c.farmacia.nome_fantasia if c.farmacia else "-",
+            texto_data(c.data_vencimento),
+            texto_data(c.data_recebimento),
+            c.valor or 0,
+            c.valor_recebido or 0,
+            c.status,
+            c.observacao or "-"
+        ])
+
+    for aba in wb.worksheets:
+        for coluna in aba.columns:
+            maior = 0
+            letra = coluna[0].column_letter
+            for celula in coluna:
+                valor = str(celula.value) if celula.value is not None else ""
+                if len(valor) > maior:
+                    maior = len(valor)
+            aba.column_dimensions[letra].width = min(maior + 3, 35)
 
     buffer = BytesIO()
     wb.save(buffer)
@@ -255,7 +389,7 @@ def relatorio_financeiro_excel():
     return send_file(
         buffer,
         as_attachment=True,
-        download_name="relatorio_financeiro.xlsx",
+        download_name="relatorio_financeiro_completo.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
@@ -464,124 +598,14 @@ def relatorio_financeiro_completo_pdf():
     total_motos = sum(d.valor or 0 for d in despesas_motos)
     total_fixas = sum(d.valor or 0 for d in despesas_fixas)
     total_receber = sum(c.valor or 0 for c in contas if c.status != "recebido")
-    total_recebido = sum((c.valor_recebido or c.valor) for c in contas if c.status == "recebido")
+    total_recebido = sum((c.valor_recebido or c.valor or 0) for c in contas if c.status == "recebido")
     total_boletos_aberto = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
     total_boletos_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
     lucro = total_vendas - (total_despesas + total_motos + total_fixas)
 
     secoes = [
         {
-            "titulo": "Vendas",
-            "cabecalho": ["Data", "Farmácia", "À Vista", "Vulcabras", "Débito", "Crédito", "Pix", "Total"],
-            "linhas": [
-                [
-                    texto_data(v.data_venda),
-                    v.farmacia.nome_fantasia if v.farmacia else "-",
-                    moeda(v.valor_vista),
-                    moeda(v.valor_vulcabras),
-                    moeda(v.valor_debito),
-                    moeda(v.valor_credito),
-                    moeda(v.valor_pix),
-                    moeda(v.total_dia),
-                ]
-                for v in vendas
-            ] or [["-", "-", "-", "-", "-", "-", "-", "-"]],
-            "resumo": [["Total de Vendas", moeda(total_vendas)]],
-        },
-        {
-            "titulo": "Despesas Gerais",
-            "cabecalho": ["Data", "Farmácia", "Categoria", "Centro Custo", "Descrição", "Forma Pgto", "Valor"],
-            "linhas": [
-                [
-                    texto_data(d.data_despesa),
-                    d.farmacia.nome_fantasia if d.farmacia else "-",
-                    d.categoria,
-                    d.centro_custo or "-",
-                    d.descricao,
-                    d.forma_pagamento or "-",
-                    moeda(d.valor),
-                ]
-                for d in despesas
-            ] or [["-", "-", "-", "-", "-", "-", "-"]],
-            "resumo": [["Total de Despesas Gerais", moeda(total_despesas)]],
-        },
-        {
-            "titulo": "Despesas das Motos",
-            "cabecalho": ["Data", "Farmácia", "Moto", "Entregador", "Tipo", "Descrição", "Valor"],
-            "linhas": [
-                [
-                    texto_data(d.data_despesa),
-                    d.farmacia.nome_fantasia if d.farmacia else "-",
-                    d.moto.modelo if d.moto else "-",
-                    d.entregador.nome if d.entregador else "-",
-                    d.tipo_despesa,
-                    d.descricao,
-                    moeda(d.valor),
-                ]
-                for d in despesas_motos
-            ] or [["-", "-", "-", "-", "-", "-", "-"]],
-            "resumo": [["Total de Despesas das Motos", moeda(total_motos)]],
-        },
-        {
-            "titulo": "Despesas Fixas",
-            "cabecalho": ["Vencimento", "Pagamento", "Farmácia", "Nome", "Categoria", "Status", "Valor"],
-            "linhas": [
-                [
-                    texto_data(d.data_vencimento),
-                    texto_data(d.data_pagamento),
-                    d.farmacia.nome_fantasia if d.farmacia else "-",
-                    d.nome,
-                    d.categoria,
-                    d.status,
-                    moeda(d.valor),
-                ]
-                for d in despesas_fixas
-            ] or [["-", "-", "-", "-", "-", "-", "-"]],
-            "resumo": [["Total de Despesas Fixas", moeda(total_fixas)]],
-        },
-        {
-            "titulo": "Boletos a Pagar",
-            "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Pagamento", "Original", "Juros", "Total", "Status"],
-            "linhas": [
-                [
-                    b.empresa_nome,
-                    b.farmacia.nome_fantasia if b.farmacia else "-",
-                    texto_data(b.data_vencimento),
-                    texto_data(b.data_pagamento),
-                    moeda(b.valor_original),
-                    moeda(b.juros),
-                    moeda(b.valor_total),
-                    b.status,
-                ]
-                for b in boletos
-            ] or [["-", "-", "-", "-", "-", "-", "-", "-"]],
-            "resumo": [
-                ["Boletos em Aberto", moeda(total_boletos_aberto)],
-                ["Boletos Pagos", moeda(total_boletos_pagos)],
-            ],
-        },
-        {
-            "titulo": "Boletos a Receber",
-            "cabecalho": ["Cliente", "Farmácia", "Vencimento", "Recebimento", "Valor", "Valor Recebido", "Status"],
-            "linhas": [
-                [
-                    c.cliente_nome,
-                    c.farmacia.nome_fantasia if c.farmacia else "-",
-                    texto_data(c.data_vencimento),
-                    texto_data(c.data_recebimento),
-                    moeda(c.valor),
-                    moeda(c.valor_recebido),
-                    c.status,
-                ]
-                for c in contas
-            ] or [["-", "-", "-", "-", "-", "-", "-"]],
-            "resumo": [
-                ["A Receber", moeda(total_receber)],
-                ["Recebido", moeda(total_recebido)],
-            ],
-        },
-        {
-            "titulo": "Resultado Final",
+            "titulo": "Resumo Geral",
             "cabecalho": ["Indicador", "Valor"],
             "linhas": [
                 ["Vendas", moeda(total_vendas)],
@@ -595,6 +619,107 @@ def relatorio_financeiro_completo_pdf():
                 ["Lucro / Resultado Final", moeda(lucro)],
             ],
             "resumo": [],
+        },
+        {
+            "titulo": "Vendas",
+            "cabecalho": ["Data", "Farmácia", "Vista", "Débito", "Crédito", "Pix", "Total"],
+            "linhas": [
+                [
+                    texto_data(v.data_venda),
+                    v.farmacia.nome_fantasia if v.farmacia else "-",
+                    moeda(v.valor_vista),
+                    moeda(v.valor_debito),
+                    moeda(v.valor_credito),
+                    moeda(v.valor_pix),
+                    moeda(v.total_dia),
+                ]
+                for v in vendas
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Vendas", moeda(total_vendas)]],
+        },
+        {
+            "titulo": "Despesas Gerais",
+            "cabecalho": ["Data", "Farmácia", "Categoria", "Descrição", "Valor"],
+            "linhas": [
+                [
+                    texto_data(d.data_despesa),
+                    d.farmacia.nome_fantasia if d.farmacia else "-",
+                    d.categoria,
+                    d.descricao,
+                    moeda(d.valor),
+                ]
+                for d in despesas
+            ] or [["-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Despesas Gerais", moeda(total_despesas)]],
+        },
+        {
+            "titulo": "Despesas das Motos",
+            "cabecalho": ["Data", "Farmácia", "Moto", "Tipo", "Valor"],
+            "linhas": [
+                [
+                    texto_data(d.data_despesa),
+                    d.farmacia.nome_fantasia if d.farmacia else "-",
+                    d.moto.modelo if d.moto else "-",
+                    d.tipo_despesa,
+                    moeda(d.valor),
+                ]
+                for d in despesas_motos
+            ] or [["-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Despesas das Motos", moeda(total_motos)]],
+        },
+        {
+            "titulo": "Despesas Fixas",
+            "cabecalho": ["Vencimento", "Farmácia", "Nome", "Status", "Valor"],
+            "linhas": [
+                [
+                    texto_data(d.data_vencimento),
+                    d.farmacia.nome_fantasia if d.farmacia else "-",
+                    d.nome,
+                    d.status,
+                    moeda(d.valor),
+                ]
+                for d in despesas_fixas
+            ] or [["-", "-", "-", "-", "-"]],
+            "resumo": [["Total de Despesas Fixas", moeda(total_fixas)]],
+        },
+        {
+            "titulo": "Boletos a Pagar",
+            "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Original", "Juros", "Pago", "Status"],
+            "linhas": [
+                [
+                    b.empresa_nome,
+                    b.farmacia.nome_fantasia if b.farmacia else "-",
+                    texto_data(b.data_vencimento),
+                    moeda(b.valor_original),
+                    moeda(b.juros),
+                    moeda(b.valor_pago),
+                    b.status,
+                ]
+                for b in boletos
+            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+            "resumo": [
+                ["Boletos em Aberto", moeda(total_boletos_aberto)],
+                ["Boletos Pagos", moeda(total_boletos_pagos)],
+            ],
+        },
+        {
+            "titulo": "Boletos a Receber",
+            "cabecalho": ["Cliente", "Farmácia", "Vencimento", "Recebimento", "Valor", "Status"],
+            "linhas": [
+                [
+                    c.cliente_nome,
+                    c.farmacia.nome_fantasia if c.farmacia else "-",
+                    texto_data(c.data_vencimento),
+                    texto_data(c.data_recebimento),
+                    moeda(c.valor),
+                    c.status,
+                ]
+                for c in contas
+            ] or [["-", "-", "-", "-", "-", "-"]],
+            "resumo": [
+                ["A Receber", moeda(total_receber)],
+                ["Recebido", moeda(total_recebido)],
+            ],
         },
     ]
 
