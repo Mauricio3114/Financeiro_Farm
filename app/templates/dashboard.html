@@ -194,6 +194,24 @@
     font-weight: 800;
 }
 
+.kpi-note {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.month-table-positive {
+    color: #16a34a;
+    font-weight: 800;
+}
+
+.month-table-negative {
+    color: #dc2626;
+    font-weight: 800;
+}
+
 @keyframes pulseBox {
     0% {
         box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45);
@@ -374,6 +392,7 @@
         <div class="card premium-card">
             <span class="card-label">Despesas Operacionais</span>
             <h2>R$ {{ "%.2f"|format(despesas_operacionais) }}</h2>
+            <span class="kpi-note">Inclui boletos pagos no período</span>
         </div>
 
         <div class="card card-result {% if lucro_liquido >= 0 %}positive{% else %}negative{% endif %}">
@@ -399,13 +418,42 @@
 </div>
 
 <div class="premium-section">
-    <h2 class="section-title">Financeiro Geral</h2>
+    <h2 class="section-title">Resumo do Mês Atual</h2>
+    <div class="cards-grid">
+        <div class="card premium-card green">
+            <span class="card-label">Boletos Pagos no Mês</span>
+            <h2>R$ {{ "%.2f"|format(total_pago_mes) }}</h2>
+            <span class="kpi-note">Pela data de pagamento</span>
+        </div>
+
+        <div class="card premium-card orange">
+            <span class="card-label">Juros Pagos no Mês</span>
+            <h2>R$ {{ "%.2f"|format(total_juros_mes) }}</h2>
+        </div>
+
+        <div class="card premium-card blue">
+            <span class="card-label">Principal Pago no Mês</span>
+            <h2>R$ {{ "%.2f"|format(total_principal_mes) }}</h2>
+        </div>
+
+        <div class="card premium-card red">
+            <span class="card-label">Boletos em Aberto</span>
+            <h2>R$ {{ "%.2f"|format(total_aberto_geral) }}</h2>
+            <span class="kpi-note">Pendências até a data final</span>
+        </div>
+    </div>
+</div>
+
+<div class="premium-section">
+    <h2 class="section-title">Financeiro Geral do Período</h2>
     <div class="cards-grid">
         <div class="card"><span class="card-label">Farmácias</span><h2>{{ total_farmacias }}</h2></div>
-        <div class="card"><span class="card-label">Boletos</span><h2>{{ total_boletos }}</h2></div>
-        <div class="card"><span class="card-label">Pagos</span><h2>{{ total_pagos }}</h2></div>
-        <div class="card"><span class="card-label">Vencidos</span><h2>{{ total_vencidos }}</h2></div>
-        <div class="card"><span class="card-label">Total Pago</span><h2>R$ {{ "%.2f"|format(soma_pagos) }}</h2></div>
+        <div class="card"><span class="card-label">Boletos no Painel</span><h2>{{ total_boletos }}</h2></div>
+        <div class="card"><span class="card-label">Boletos Pagos</span><h2>{{ total_pagos }}</h2></div>
+        <div class="card"><span class="card-label">Boletos Vencidos</span><h2>{{ total_vencidos }}</h2></div>
+        <div class="card"><span class="card-label">Total Pago em Boletos</span><h2>R$ {{ "%.2f"|format(soma_pagos) }}</h2></div>
+        <div class="card"><span class="card-label">Principal Pago</span><h2>R$ {{ "%.2f"|format(soma_principal_pago_periodo) }}</h2></div>
+        <div class="card"><span class="card-label">Juros Pagos</span><h2>R$ {{ "%.2f"|format(soma_juros_pagos_periodo) }}</h2></div>
         <div class="card"><span class="card-label">A Pagar</span><h2>R$ {{ "%.2f"|format(soma_a_pagar) }}</h2></div>
         <div class="card"><span class="card-label">A Receber</span><h2>R$ {{ "%.2f"|format(total_receber) }}</h2></div>
         <div class="card"><span class="card-label">Recebido</span><h2>R$ {{ "%.2f"|format(total_recebido) }}</h2></div>
@@ -433,6 +481,44 @@
         <canvas id="graficoPagamentos"></canvas>
     </div>
 
+    <div class="table-card full-width">
+        <h3>Resumo Mensal do Ano</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mês</th>
+                    <th>Principal Pago</th>
+                    <th>Juros</th>
+                    <th>Boletos Pagos</th>
+                    <th>Despesas sem Boletos</th>
+                    <th>Despesas Totais</th>
+                    <th>Vendas</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in resumo_mensal %}
+                <tr>
+                    <td>{{ item.mes }}</td>
+                    <td>R$ {{ "%.2f"|format(item.principal) }}</td>
+                    <td>R$ {{ "%.2f"|format(item.juros) }}</td>
+                    <td>R$ {{ "%.2f"|format(item.boletos_pagos) }}</td>
+                    <td>R$ {{ "%.2f"|format(item.despesas) }}</td>
+                    <td>R$ {{ "%.2f"|format(item.despesas_total) }}</td>
+                    <td>R$ {{ "%.2f"|format(item.vendas) }}</td>
+                    <td class="{% if item.resultado >= 0 %}month-table-positive{% else %}month-table-negative{% endif %}">
+                        R$ {{ "%.2f"|format(item.resultado) }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">Sem dados mensais.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     <div class="table-card">
         <h3>Comparativo Mensal</h3>
         <table>
@@ -450,7 +536,7 @@
                     <td>R$ {{ "%.2f"|format(vendas_mes_anterior) }}</td>
                 </tr>
                 <tr>
-                    <td>Despesas</td>
+                    <td>Despesas Totais</td>
                     <td>R$ {{ "%.2f"|format(despesas_mes_atual) }}</td>
                     <td>R$ {{ "%.2f"|format(despesas_mes_anterior) }}</td>
                 </tr>
@@ -590,7 +676,7 @@ if (ctx) {
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Receita Bruta', 'Desp. Gerais', 'Desp. Motos', 'Desp. Fixas', 'Lucro Líquido'],
+            labels: ['Receita Bruta', 'Desp. Gerais', 'Desp. Motos', 'Desp. Fixas', 'Boletos Pagos', 'Lucro Líquido'],
             datasets: [{
                 label: 'Valores',
                 data: [
@@ -598,9 +684,10 @@ if (ctx) {
                     {{ total_despesas|round(2) }},
                     {{ total_despesas_motos|round(2) }},
                     {{ total_despesas_fixas|round(2) }},
+                    {{ soma_pagos|round(2) }},
                     {{ lucro_liquido|round(2) }}
                 ],
-                backgroundColor: ['#2563eb', '#f59e0b', '#ef4444', '#8b5cf6', '#16a34a'],
+                backgroundColor: ['#2563eb', '#f59e0b', '#ef4444', '#8b5cf6', '#334155', '#16a34a'],
                 borderRadius: 10
             }]
         },

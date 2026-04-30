@@ -108,6 +108,42 @@ def somar_despesas_fixas_periodo(farmacia_ids, inicio, fim):
     return float(total or 0)
 
 
+def boletos_pagos_periodo(farmacia_ids, inicio, fim):
+    if not farmacia_ids:
+        return []
+
+    boletos = Boleto.query.filter(
+        Boleto.farmacia_id.in_(farmacia_ids),
+        Boleto.data_pagamento.isnot(None),
+        Boleto.data_pagamento >= inicio,
+        Boleto.data_pagamento <= fim
+    ).all()
+
+    for boleto in boletos:
+        boleto.preparar()
+
+    return [b for b in boletos if b.status == "pago"]
+
+
+def boletos_abertos_ate_data(farmacia_ids, data_limite):
+    if not farmacia_ids:
+        return []
+
+    boletos = Boleto.query.filter(
+        Boleto.farmacia_id.in_(farmacia_ids)
+    ).all()
+
+    resultado = []
+
+    for boleto in boletos:
+        boleto.preparar()
+
+        if boleto.status != "pago" and boleto.data_vencimento <= data_limite:
+            resultado.append(boleto)
+
+    return resultado
+
+
 @dashboard_bp.route("/dashboard")
 @login_required
 def dashboard():
@@ -138,6 +174,9 @@ def dashboard():
     total_vencidos = 0
     soma_a_pagar = 0
     soma_pagos = 0
+    soma_juros_pagos_periodo = 0
+    soma_principal_pago_periodo = 0
+
     total_despesas = 0
     total_despesas_motos = 0
     total_despesas_fixas = 0
@@ -169,24 +208,34 @@ def dashboard():
     agenda_urgente = 0
     agenda_total_pendente = 0
 
+    resumo_mensal = []
+    total_pago_mes = 0
+    total_juros_mes = 0
+    total_principal_mes = 0
+    total_aberto_geral = 0
+
     if farmacia_ids_filtrados:
-        boletos_query = Boleto.query.filter(
-            Boleto.farmacia_id.in_(farmacia_ids_filtrados),
-            Boleto.data_vencimento >= data_inicio,
-            Boleto.data_vencimento <= data_fim
+        boletos_pagos_no_periodo = boletos_pagos_periodo(
+            farmacia_ids_filtrados,
+            data_inicio,
+            data_fim
         )
-        boletos = boletos_query.order_by(Boleto.data_vencimento.asc()).all()
 
-        for boleto in boletos:
-            boleto.preparar()
+        boletos_abertos_geral = boletos_abertos_ate_data(
+            farmacia_ids_filtrados,
+            data_fim
+        )
 
-        db.session.commit()
+        total_boletos = len(boletos_pagos_no_periodo) + len(boletos_abertos_geral)
+        total_pagos = len(boletos_pagos_no_periodo)
+        total_vencidos = len([b for b in boletos_abertos_geral if b.status == "vencido"])
 
-        total_boletos = len(boletos)
-        total_pagos = len([b for b in boletos if b.status == "pago"])
-        total_vencidos = len([b for b in boletos if b.status == "vencido"])
-        soma_a_pagar = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
-        soma_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
+        soma_pagos = sum((b.valor_pago or 0) for b in boletos_pagos_no_periodo)
+        soma_juros_pagos_periodo = sum((b.juros or 0) for b in boletos_pagos_no_periodo)
+        soma_principal_pago_periodo = sum((b.valor_original or 0) for b in boletos_pagos_no_periodo)
+        soma_a_pagar = sum((b.valor_total or 0) for b in boletos_abertos_geral)
+
+        total_aberto_geral = soma_a_pagar
 
         boletos_alerta = Boleto.query.filter(
             Boleto.farmacia_id.in_(farmacia_ids_filtrados)
@@ -329,9 +378,11 @@ def dashboard():
         if total_despesas_fixas > 0:
             centros["Geral"] += float(total_despesas_fixas)
 
+        if soma_pagos > 0:
+            centros["Boletos pagos"] += float(soma_pagos)
+
         top_centros = sorted(centros.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # 🔔 AGENDA GLOBAL — alertar tarefas, ligações, avisos e eventos pendentes
     eventos_agenda = AgendaEvento.query.filter(
         AgendaEvento.status == "pendente"
     ).all()
@@ -341,7 +392,6 @@ def dashboard():
     eventos_alerta = []
     for evento in eventos_agenda:
         alerta = evento.nivel_alerta()
-
         evento.farmacia = SimpleNamespace(nome_fantasia="Agenda Geral")
 
         if alerta == "hoje":
@@ -357,7 +407,10 @@ def dashboard():
     )
 
     receita_bruta = float(total_vendas)
-    despesas_operacionais = float(total_despesas + total_despesas_motos + total_despesas_fixas)
+
+    despesas_sem_boletos = float(total_despesas + total_despesas_motos + total_despesas_fixas)
+    despesas_operacionais = float(despesas_sem_boletos + soma_pagos)
+
     lucro_liquido = float(receita_bruta - despesas_operacionais)
     resultado = lucro_liquido
     saldo_caixa = float(total_entradas_caixa - total_saidas_caixa)
@@ -379,11 +432,24 @@ def dashboard():
             inicio_mes_atual,
             min(hoje, fim_mes_atual)
         )
-        despesas_mes_atual = (
+
+        boletos_mes_atual = boletos_pagos_periodo(
+            farmacia_ids_filtrados,
+            inicio_mes_atual,
+            min(hoje, fim_mes_atual)
+        )
+
+        total_pago_mes = sum(b.valor_pago or 0 for b in boletos_mes_atual)
+        total_juros_mes = sum(b.juros or 0 for b in boletos_mes_atual)
+        total_principal_mes = sum(b.valor_original or 0 for b in boletos_mes_atual)
+
+        despesas_mes_atual_sem_boletos = (
             somar_despesas_gerais_periodo(farmacia_ids_filtrados, inicio_mes_atual, min(hoje, fim_mes_atual))
             + somar_despesas_motos_periodo(farmacia_ids_filtrados, inicio_mes_atual, min(hoje, fim_mes_atual))
             + somar_despesas_fixas_periodo(farmacia_ids_filtrados, inicio_mes_atual, min(hoje, fim_mes_atual))
         )
+
+        despesas_mes_atual = despesas_mes_atual_sem_boletos + total_pago_mes
         lucro_mes_atual = vendas_mes_atual - despesas_mes_atual
 
         vendas_mes_anterior = somar_vendas_periodo(
@@ -391,12 +457,54 @@ def dashboard():
             inicio_mes_anterior,
             fim_mes_anterior
         )
-        despesas_mes_anterior = (
+
+        boletos_mes_anterior = boletos_pagos_periodo(
+            farmacia_ids_filtrados,
+            inicio_mes_anterior,
+            fim_mes_anterior
+        )
+
+        total_pago_mes_anterior = sum(b.valor_pago or 0 for b in boletos_mes_anterior)
+
+        despesas_mes_anterior_sem_boletos = (
             somar_despesas_gerais_periodo(farmacia_ids_filtrados, inicio_mes_anterior, fim_mes_anterior)
             + somar_despesas_motos_periodo(farmacia_ids_filtrados, inicio_mes_anterior, fim_mes_anterior)
             + somar_despesas_fixas_periodo(farmacia_ids_filtrados, inicio_mes_anterior, fim_mes_anterior)
         )
+
+        despesas_mes_anterior = despesas_mes_anterior_sem_boletos + total_pago_mes_anterior
         lucro_mes_anterior = vendas_mes_anterior - despesas_mes_anterior
+
+        for mes in range(1, 13):
+            inicio_mes = date(hoje.year, mes, 1)
+            fim_mes = date(hoje.year, mes, monthrange(hoje.year, mes)[1])
+
+            boletos_mes = boletos_pagos_periodo(farmacia_ids_filtrados, inicio_mes, fim_mes)
+
+            total_pago = sum(b.valor_pago or 0 for b in boletos_mes)
+            total_juros = sum(b.juros or 0 for b in boletos_mes)
+            total_principal = sum(b.valor_original or 0 for b in boletos_mes)
+
+            despesas_sem_boletos_mes = (
+                somar_despesas_gerais_periodo(farmacia_ids_filtrados, inicio_mes, fim_mes)
+                + somar_despesas_motos_periodo(farmacia_ids_filtrados, inicio_mes, fim_mes)
+                + somar_despesas_fixas_periodo(farmacia_ids_filtrados, inicio_mes, fim_mes)
+            )
+
+            despesas_mes = despesas_sem_boletos_mes + total_pago
+            vendas_mes = somar_vendas_periodo(farmacia_ids_filtrados, inicio_mes, fim_mes)
+            resultado_mes = vendas_mes - despesas_mes
+
+            resumo_mensal.append({
+                "mes": inicio_mes.strftime("%m/%Y"),
+                "principal": total_principal,
+                "juros": total_juros,
+                "boletos_pagos": total_pago,
+                "despesas": despesas_sem_boletos_mes,
+                "despesas_total": despesas_mes,
+                "vendas": vendas_mes,
+                "resultado": resultado_mes
+            })
     else:
         vendas_mes_atual = 0
         despesas_mes_atual = 0
@@ -414,10 +522,10 @@ def dashboard():
 
     if dias_decorridos > 0 and data_inicio == inicio_mes_atual and data_fim == hoje:
         media_vendas_dia = receita_bruta / dias_decorridos if dias_decorridos else 0
-        media_despesas_dia = (total_despesas + total_despesas_motos) / dias_decorridos if dias_decorridos else 0
+        media_despesas_dia = (despesas_sem_boletos + soma_pagos) / dias_decorridos if dias_decorridos else 0
 
         previsao_receita = media_vendas_dia * dias_no_mes
-        previsao_despesas = (media_despesas_dia * dias_no_mes) + total_despesas_fixas
+        previsao_despesas = media_despesas_dia * dias_no_mes
         previsao_lucro = previsao_receita - previsao_despesas
 
     return render_template(
@@ -428,6 +536,8 @@ def dashboard():
         total_vencidos=total_vencidos,
         soma_a_pagar=soma_a_pagar,
         soma_pagos=soma_pagos,
+        soma_juros_pagos_periodo=soma_juros_pagos_periodo,
+        soma_principal_pago_periodo=soma_principal_pago_periodo,
         total_despesas=total_despesas,
         total_despesas_motos=total_despesas_motos,
         total_despesas_fixas=total_despesas_fixas,
@@ -469,5 +579,10 @@ def dashboard():
         agenda_proximos=agenda_proximos,
         agenda_hoje=agenda_hoje,
         agenda_urgente=agenda_urgente,
-        agenda_total_pendente=agenda_total_pendente
+        agenda_total_pendente=agenda_total_pendente,
+        resumo_mensal=resumo_mensal,
+        total_pago_mes=total_pago_mes,
+        total_juros_mes=total_juros_mes,
+        total_principal_mes=total_principal_mes,
+        total_aberto_geral=total_aberto_geral
     )
