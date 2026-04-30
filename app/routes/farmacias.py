@@ -111,3 +111,19 @@ def editar_farmacia(farmacia_id):
         farmacia=farmacia,
         vinculados=vinculados
     )
+
+
+@farmacias_bp.route("/deletar/<int:farmacia_id>", methods=["POST"])
+@login_required
+def deletar_farmacia(farmacia_id):
+    if not admin_required():
+        flash("Apenas admin pode deletar farmácias.", "danger")
+        return redirect(url_for("farmacias.listar_farmacias"))
+
+    farmacia = Farmacia.query.get_or_404(farmacia_id)
+
+    db.session.delete(farmacia)
+    db.session.commit()
+
+    flash("Farmácia deletada com sucesso.", "success")
+    return redirect(url_for("farmacias.listar_farmacias"))
