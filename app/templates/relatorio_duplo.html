@@ -119,7 +119,14 @@
     </div>
 
     <div class="relatorio-toolbar">
-        <a href="{{ url_for(rota_pdf, data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'), farmacia_id=request.args.get('farmacia_id')) }}"
+        <a href="{{ url_for(
+            rota_pdf,
+            data_inicio=request.args.get('data_inicio'),
+            data_fim=request.args.get('data_fim'),
+            farmacia_id=request.args.get('farmacia_id'),
+            empresa=request.args.get('empresa'),
+            status=request.args.get('status')
+        ) }}"
            class="btn btn-danger">
             PDF
         </a>
@@ -139,6 +146,26 @@
                 {% endfor %}
             </select>
         </div>
+
+        {% if mostrar_filtro_empresa %}
+        <div class="form-group">
+            <label>Empresa / Fornecedor</label>
+            <input type="text" name="empresa" placeholder="Ex: Distribuidora"
+                   value="{{ empresa or '' }}">
+        </div>
+        {% endif %}
+
+        {% if mostrar_filtro_status %}
+        <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+                <option value="todos" {% if status_filtro == 'todos' %}selected{% endif %}>Todos</option>
+                <option value="aberto" {% if status_filtro == 'aberto' %}selected{% endif %}>A vencer</option>
+                <option value="vencido" {% if status_filtro == 'vencido' %}selected{% endif %}>Vencidos</option>
+                <option value="pago" {% if status_filtro == 'pago' %}selected{% endif %}>Pagos</option>
+            </select>
+        </div>
+        {% endif %}
 
         <div class="form-group">
             <label>Data Inicial</label>

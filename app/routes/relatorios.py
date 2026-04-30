@@ -1089,92 +1089,61 @@ def relatorio_despesas_fixas_pdf():
     )
 
 
-@relatorios_bp.route("/boletos-pagar")
-@login_required
-def relatorio_boletos_pagar():
-    farmacia_ids = get_filtro_ids()
-    farmacias, filtro_farmacia_id = get_farmacias_e_filtro()
-    data_inicio = parse_date(request.args.get("data_inicio"))
-    data_fim = parse_date(request.args.get("data_fim"))
-
-    if not farmacia_ids:
-        flash("Nenhuma farmácia encontrada.", "danger")
-        return redirect(url_for("dashboard.dashboard"))
-
-    boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
-    boletos = aplicar_filtro_periodo_lista(boletos, "data_vencimento", data_inicio, data_fim)
-
-    for b in boletos:
-        b.preparar()
-
-    total = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
-    total_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
-
-    detalhes_1 = []
-    detalhes_2 = []
-
-    for b in boletos:
-        linha = {
-            "Empresa": b.empresa_nome,
-            "Descrição": b.descricao or "-",
-            "Farmácia": b.farmacia.nome_fantasia if b.farmacia else "-",
-            "Vencimento": texto_data(b.data_vencimento),
-            "Pagamento": texto_data(b.data_pagamento),
-            "Original": moeda(b.valor_original),
-            "Juros": moeda(b.juros),
-            "Total": moeda(b.valor_total),
-            "Pago": moeda(b.valor_pago),
-            "Status": b.status
-        }
-
-        if b.status == "pago":
-            detalhes_2.append(linha)
-        else:
-            detalhes_1.append(linha)
-
-    return render_template(
-        "relatorio_duplo.html",
-        titulo="Relatório de Boletos a Pagar",
-        subtitulo="Resumo detalhado de boletos a pagar do período",
-        total_1=total,
-        total_2=total_pagos,
-        label_1="Boletos em Aberto",
-        label_2="Boletos Pagos",
-        cor_1="yellow",
-        cor_2="green",
-        rota_pdf="relatorios.relatorio_boletos_pagar_pdf",
-        farmacias=farmacias,
-        filtro_farmacia_id=filtro_farmacia_id,
-        data_inicio=request.args.get("data_inicio", ""),
-        data_fim=request.args.get("data_fim", ""),
-        detalhes_1=detalhes_1,
-        detalhes_2=detalhes_2
-    )
-
-
 @relatorios_bp.route("/boletos-pagar-pdf")
 @login_required
 def relatorio_boletos_pagar_pdf():
     farmacia_ids = get_filtro_ids()
+
     data_inicio = parse_date(request.args.get("data_inicio"))
     data_fim = parse_date(request.args.get("data_fim"))
+    empresa = request.args.get("empresa", "").strip()
+    status_filtro = request.args.get("status", "todos").strip()
 
     if not farmacia_ids:
         flash("Nenhuma farmácia encontrada.", "danger")
         return redirect(url_for("dashboard.dashboard"))
 
     boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
-    boletos = aplicar_filtro_periodo_lista(boletos, "data_vencimento", data_inicio, data_fim)
 
     for b in boletos:
         b.preparar()
 
-    total_aberto = sum((b.valor_total or 0) for b in boletos if b.status in ["a_vencer", "vencido"])
-    total_pagos = sum((b.valor_pago or 0) for b in boletos if b.status == "pago")
+    boletos_abertos = []
+    boletos_pagos = []
+
+    for b in boletos:
+        if empresa and empresa.lower() not in (b.empresa_nome or "").lower():
+            continue
+
+        if b.status == "pago":
+            if b.data_pagamento:
+                if data_inicio and b.data_pagamento < data_inicio:
+                    continue
+                if data_fim and b.data_pagamento > data_fim:
+                    continue
+                boletos_pagos.append(b)
+        else:
+            if data_fim:
+                if b.data_vencimento <= data_fim:
+                    boletos_abertos.append(b)
+            else:
+                boletos_abertos.append(b)
+
+    if status_filtro == "pago":
+        boletos_abertos = []
+    elif status_filtro == "aberto":
+        boletos_pagos = []
+        boletos_abertos = [b for b in boletos_abertos if b.status == "a_vencer"]
+    elif status_filtro == "vencido":
+        boletos_pagos = []
+        boletos_abertos = [b for b in boletos_abertos if b.status == "vencido"]
+
+    total_aberto = sum((b.valor_total or 0) for b in boletos_abertos)
+    total_pagos = sum((b.valor_pago or 0) for b in boletos_pagos)
 
     secoes = [
         {
-            "titulo": "Boletos em Aberto",
+            "titulo": "Boletos em Aberto / Vencidos",
             "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Original", "Juros", "Total", "Status"],
             "linhas": [
                 [
@@ -1186,25 +1155,26 @@ def relatorio_boletos_pagar_pdf():
                     moeda(b.valor_total),
                     b.status,
                 ]
-                for b in boletos if b.status in ["a_vencer", "vencido"]
+                for b in boletos_abertos
             ] or [["-", "-", "-", "-", "-", "-", "-"]],
             "resumo": [["Total em Aberto", moeda(total_aberto)]],
         },
         {
-            "titulo": "Boletos Pagos",
-            "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Pagamento", "Total", "Pago", "Status"],
+            "titulo": "Boletos Pagos no Período",
+            "cabecalho": ["Empresa", "Farmácia", "Vencimento", "Pagamento", "Original", "Juros", "Pago", "Status"],
             "linhas": [
                 [
                     b.empresa_nome,
                     b.farmacia.nome_fantasia if b.farmacia else "-",
                     texto_data(b.data_vencimento),
                     texto_data(b.data_pagamento),
-                    moeda(b.valor_total),
+                    moeda(b.valor_original),
+                    moeda(b.juros),
                     moeda(b.valor_pago),
                     b.status,
                 ]
-                for b in boletos if b.status == "pago"
-            ] or [["-", "-", "-", "-", "-", "-", "-"]],
+                for b in boletos_pagos
+            ] or [["-", "-", "-", "-", "-", "-", "-", "-"]],
             "resumo": [["Total Pago", moeda(total_pagos)]],
         },
     ]
@@ -1214,6 +1184,114 @@ def relatorio_boletos_pagar_pdf():
         formatar_periodo(data_inicio, data_fim),
         secoes,
         "relatorio_boletos_pagar.pdf"
+    )
+
+
+@relatorios_bp.route("/boletos-pagar")
+@login_required
+def relatorio_boletos_pagar():
+    farmacia_ids = get_filtro_ids()
+    farmacias, filtro_farmacia_id = get_farmacias_e_filtro()
+
+    data_inicio = parse_date(request.args.get("data_inicio"))
+    data_fim = parse_date(request.args.get("data_fim"))
+    empresa = request.args.get("empresa", "").strip()
+    status_filtro = request.args.get("status", "todos").strip()
+
+    if not farmacia_ids:
+        flash("Nenhuma farmácia encontrada.", "danger")
+        return redirect(url_for("dashboard.dashboard"))
+
+    boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
+
+    for b in boletos:
+        b.preparar()
+
+    boletos_abertos = []
+    boletos_pagos = []
+
+    for b in boletos:
+        if empresa and empresa.lower() not in (b.empresa_nome or "").lower():
+            continue
+
+        if b.status == "pago":
+            if b.data_pagamento:
+                if data_inicio and b.data_pagamento < data_inicio:
+                    continue
+                if data_fim and b.data_pagamento > data_fim:
+                    continue
+                boletos_pagos.append(b)
+        else:
+            if data_fim:
+                if b.data_vencimento <= data_fim:
+                    boletos_abertos.append(b)
+            else:
+                boletos_abertos.append(b)
+
+    if status_filtro == "pago":
+        boletos_abertos = []
+    elif status_filtro == "aberto":
+        boletos_pagos = []
+        boletos_abertos = [b for b in boletos_abertos if b.status == "a_vencer"]
+    elif status_filtro == "vencido":
+        boletos_pagos = []
+        boletos_abertos = [b for b in boletos_abertos if b.status == "vencido"]
+
+    total = sum((b.valor_total or 0) for b in boletos_abertos)
+    total_pagos = sum((b.valor_pago or 0) for b in boletos_pagos)
+
+    detalhes_1 = []
+    detalhes_2 = []
+
+    for b in boletos_abertos:
+        detalhes_1.append({
+            "Empresa": b.empresa_nome,
+            "Descrição": b.descricao or "-",
+            "Farmácia": b.farmacia.nome_fantasia if b.farmacia else "-",
+            "Vencimento": texto_data(b.data_vencimento),
+            "Pagamento": texto_data(b.data_pagamento),
+            "Original": moeda(b.valor_original),
+            "Juros": moeda(b.juros),
+            "Total": moeda(b.valor_total),
+            "Pago": moeda(b.valor_pago),
+            "Status": b.status
+        })
+
+    for b in boletos_pagos:
+        detalhes_2.append({
+            "Empresa": b.empresa_nome,
+            "Descrição": b.descricao or "-",
+            "Farmácia": b.farmacia.nome_fantasia if b.farmacia else "-",
+            "Vencimento": texto_data(b.data_vencimento),
+            "Pagamento": texto_data(b.data_pagamento),
+            "Original": moeda(b.valor_original),
+            "Juros": moeda(b.juros),
+            "Total": moeda(b.valor_total),
+            "Pago": moeda(b.valor_pago),
+            "Status": b.status
+        })
+
+    return render_template(
+        "relatorio_duplo.html",
+        titulo="Relatório de Boletos a Pagar",
+        subtitulo="Boletos pagos entram no mês do pagamento; boletos em aberto atravessam mês até serem pagos",
+        total_1=total,
+        total_2=total_pagos,
+        label_1="Boletos em Aberto / Vencidos",
+        label_2="Boletos Pagos no Período",
+        cor_1="yellow",
+        cor_2="green",
+        rota_pdf="relatorios.relatorio_boletos_pagar_pdf",
+        farmacias=farmacias,
+        filtro_farmacia_id=filtro_farmacia_id,
+        data_inicio=request.args.get("data_inicio", ""),
+        data_fim=request.args.get("data_fim", ""),
+        empresa=empresa,
+        status_filtro=status_filtro,
+        mostrar_filtro_empresa=True,
+        mostrar_filtro_status=True,
+        detalhes_1=detalhes_1,
+        detalhes_2=detalhes_2
     )
 
 
