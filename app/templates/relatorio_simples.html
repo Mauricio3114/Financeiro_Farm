@@ -109,11 +109,34 @@
         <p class="relatorio-subtitle">{{ subtitulo }}</p>
     </div>
 
-    <div class="relatorio-toolbar">
-        <a href="{{ url_for(rota_pdf, data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'), farmacia_id=request.args.get('farmacia_id')) }}"
-           class="btn btn-danger">
+    <div class="relatorio-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+
+        <a
+            href="{{ url_for(
+                'relatorios.relatorio_financeiro_completo_pdf',
+                farmacia_ids=request.args.getlist('farmacia_ids'),
+                data_inicio=data_inicio,
+                data_fim=data_fim
+            ) }}"
+            class="btn btn-danger"
+            style="background:#ef4444;color:white;"
+        >
             PDF
         </a>
+
+        <a
+            href="{{ url_for(
+                'relatorios.relatorio_financeiro_excel',
+                farmacia_ids=request.args.getlist('farmacia_ids'),
+                data_inicio=data_inicio,
+                data_fim=data_fim
+            ) }}"
+            class="btn btn-success"
+            style="background:#16a34a;color:white;"
+        >
+            Excel
+        </a>
+
     </div>
 </div>
 

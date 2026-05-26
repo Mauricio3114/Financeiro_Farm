@@ -169,9 +169,18 @@
         <p class="relatorio-subtitle">Visão consolidada e detalhada das finanças</p>
     </div>
 
-    <div class="relatorio-toolbar">
-        <a href="{{ url_for('relatorios.relatorio_financeiro_completo_pdf', data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim')) }}"
-           class="btn btn-danger">
+    <div class="relatorio-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+
+        <a
+            href="{{ url_for(
+                'relatorios.relatorio_financeiro_completo_pdf',
+                farmacia_ids=request.args.getlist('farmacia_ids'),
+                data_inicio=data_inicio,
+                data_fim=data_fim
+            ) }}"
+            class="btn btn-danger"
+            style="background:#ef4444;color:white;"
+        >
             PDF
         </a>
 
@@ -187,6 +196,7 @@
         >
             Excel
         </a>
+
     </div>
 </div>
 
