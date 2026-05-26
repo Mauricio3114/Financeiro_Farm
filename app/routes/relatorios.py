@@ -820,6 +820,65 @@ def relatorio_vendas_pdf():
     )
 
 
+@relatorios_bp.route("/vendas-excel")
+@login_required
+def relatorio_vendas_excel():
+
+    farmacia_ids = get_filtro_ids()
+
+    data_inicio = parse_date(request.args.get("data_inicio"))
+    data_fim = parse_date(request.args.get("data_fim"))
+
+    vendas = VendaDiaria.query.filter(
+        VendaDiaria.farmacia_id.in_(farmacia_ids)
+    ).all()
+
+    vendas = aplicar_filtro_periodo_lista(
+        vendas,
+        "data_venda",
+        data_inicio,
+        data_fim
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Vendas"
+
+    ws.append([
+        "Data",
+        "Farmácia",
+        "À Vista",
+        "Vulcabras",
+        "Débito",
+        "Crédito",
+        "Pix",
+        "Total"
+    ])
+
+    for v in vendas:
+        ws.append([
+            texto_data(v.data_venda),
+            v.farmacia.nome_fantasia if v.farmacia else "-",
+            v.valor_vista or 0,
+            v.valor_vulcabras or 0,
+            v.valor_debito or 0,
+            v.valor_credito or 0,
+            v.valor_pix or 0,
+            v.total_dia or 0,
+        ])
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="relatorio_vendas.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
 @relatorios_bp.route("/despesas")
 @login_required
 def relatorio_despesas():
