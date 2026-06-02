@@ -1538,3 +1538,239 @@ def relatorio_boletos_pagos():
         total_pago=total_pago,
         detalhes_boletos=detalhes_boletos
     )
+
+
+def ajustar_largura_excel(wb):
+    for aba in wb.worksheets:
+        for coluna in aba.columns:
+            maior = 0
+            letra = coluna[0].column_letter
+
+            for celula in coluna:
+                valor = str(celula.value) if celula.value is not None else ""
+                if len(valor) > maior:
+                    maior = len(valor)
+
+            aba.column_dimensions[letra].width = min(maior + 3, 40)
+
+
+@relatorios_bp.route("/boletos-pagar-excel")
+@login_required
+def relatorio_boletos_pagar_excel():
+    farmacia_ids = get_filtro_ids()
+
+    data_inicio = parse_date(request.args.get("data_inicio"))
+    data_fim = parse_date(request.args.get("data_fim"))
+    empresa = request.args.get("empresa", "").strip()
+    status_filtro = request.args.get("status", "todos").strip()
+
+    boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
+
+    for b in boletos:
+        b.preparar()
+
+    boletos_abertos = []
+    boletos_pagos = []
+
+    for b in boletos:
+        if empresa and empresa.lower() not in (b.empresa_nome or "").lower():
+            continue
+
+        if b.status == "pago":
+            if b.data_pagamento:
+                if data_inicio and b.data_pagamento < data_inicio:
+                    continue
+                if data_fim and b.data_pagamento > data_fim:
+                    continue
+                boletos_pagos.append(b)
+        else:
+            if data_fim:
+                if b.data_vencimento <= data_fim:
+                    boletos_abertos.append(b)
+            else:
+                boletos_abertos.append(b)
+
+    if status_filtro == "pago":
+        boletos_abertos = []
+    elif status_filtro == "aberto":
+        boletos_pagos = []
+        boletos_abertos = [b for b in boletos_abertos if b.status == "a_vencer"]
+    elif status_filtro == "vencido":
+        boletos_pagos = []
+        boletos_abertos = [b for b in boletos_abertos if b.status == "vencido"]
+
+    wb = Workbook()
+
+    ws1 = wb.active
+    ws1.title = "Abertos e Vencidos"
+    ws1.append(["Empresa", "Descrição", "Farmácia", "Vencimento", "Original", "Juros", "Total", "Status"])
+
+    for b in boletos_abertos:
+        ws1.append([
+            b.empresa_nome,
+            b.descricao or "-",
+            b.farmacia.nome_fantasia if b.farmacia else "-",
+            texto_data(b.data_vencimento),
+            b.valor_original or 0,
+            b.juros or 0,
+            b.valor_total or 0,
+            b.status
+        ])
+
+    ws2 = wb.create_sheet("Pagos no Período")
+    ws2.append(["Empresa", "Descrição", "Farmácia", "Vencimento", "Pagamento", "Original", "Juros", "Pago", "Status"])
+
+    for b in boletos_pagos:
+        ws2.append([
+            b.empresa_nome,
+            b.descricao or "-",
+            b.farmacia.nome_fantasia if b.farmacia else "-",
+            texto_data(b.data_vencimento),
+            texto_data(b.data_pagamento),
+            b.valor_original or 0,
+            b.juros or 0,
+            b.valor_pago or 0,
+            b.status
+        ])
+
+    ajustar_largura_excel(wb)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="relatorio_boletos_a_pagar.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+@relatorios_bp.route("/boletos-receber-excel")
+@login_required
+def relatorio_boletos_receber_excel():
+    farmacia_ids = get_filtro_ids()
+
+    data_inicio = parse_date(request.args.get("data_inicio"))
+    data_fim = parse_date(request.args.get("data_fim"))
+
+    contas = ContaReceber.query.filter(ContaReceber.farmacia_id.in_(farmacia_ids)).all()
+    contas = aplicar_filtro_periodo_lista(contas, "data_vencimento", data_inicio, data_fim)
+
+    for c in contas:
+        c.preparar()
+
+    wb = Workbook()
+
+    ws1 = wb.active
+    ws1.title = "A Receber"
+    ws1.append(["Cliente", "Descrição", "Farmácia", "Vencimento", "Valor", "Status"])
+
+    for c in contas:
+        if c.status != "recebido":
+            ws1.append([
+                c.cliente_nome,
+                c.descricao or "-",
+                c.farmacia.nome_fantasia if c.farmacia else "-",
+                texto_data(c.data_vencimento),
+                c.valor or 0,
+                c.status
+            ])
+
+    ws2 = wb.create_sheet("Recebidos")
+    ws2.append(["Cliente", "Descrição", "Farmácia", "Vencimento", "Recebimento", "Valor Recebido", "Status"])
+
+    for c in contas:
+        if c.status == "recebido":
+            ws2.append([
+                c.cliente_nome,
+                c.descricao or "-",
+                c.farmacia.nome_fantasia if c.farmacia else "-",
+                texto_data(c.data_vencimento),
+                texto_data(c.data_recebimento),
+                c.valor_recebido or c.valor or 0,
+                c.status
+            ])
+
+    ajustar_largura_excel(wb)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="relatorio_boletos_a_receber.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+@relatorios_bp.route("/boletos-pagos-excel")
+@login_required
+def relatorio_boletos_pagos_excel():
+    farmacia_id = request.args.get("farmacia_id", type=int)
+    data_inicio = parse_date(request.args.get("data_inicio"))
+    data_fim = parse_date(request.args.get("data_fim"))
+
+    if farmacia_id:
+        farmacia_ids = [farmacia_id]
+    else:
+        farmacia_ids = get_filtro_ids()
+
+    boletos = Boleto.query.filter(Boleto.farmacia_id.in_(farmacia_ids)).all()
+
+    for b in boletos:
+        b.preparar()
+
+    boletos = [b for b in boletos if b.status == "pago"]
+
+    boletos = aplicar_filtro_periodo_lista(
+        boletos,
+        "data_pagamento",
+        data_inicio,
+        data_fim
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Boletos Pagos"
+
+    ws.append([
+        "Empresa",
+        "Farmácia",
+        "Descrição",
+        "Vencimento",
+        "Pagamento",
+        "Valor Principal",
+        "Juros Pago",
+        "Total Pago",
+        "Observação"
+    ])
+
+    for b in boletos:
+        ws.append([
+            b.empresa_nome,
+            b.farmacia.nome_fantasia if b.farmacia else "-",
+            b.descricao or "-",
+            texto_data(b.data_vencimento),
+            texto_data(b.data_pagamento),
+            b.valor_original or 0,
+            b.juros or 0,
+            b.valor_pago or b.valor_total or 0,
+            b.observacao or "-"
+        ])
+
+    ajustar_largura_excel(wb)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="relatorio_boletos_pagos.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )

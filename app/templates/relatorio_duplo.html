@@ -119,17 +119,25 @@
     </div>
 
     <div class="relatorio-toolbar">
+
         <a href="{{ url_for(
             rota_pdf,
-            data_inicio=request.args.get('data_inicio'),
-            data_fim=request.args.get('data_fim'),
             farmacia_id=request.args.get('farmacia_id'),
+            data_inicio=data_inicio,
+            data_fim=data_fim,
             empresa=request.args.get('empresa'),
             status=request.args.get('status')
         ) }}"
-           class="btn btn-danger">
+        class="btn btn-danger">
             PDF
         </a>
+
+        <a href="{{ request.path }}-excel?{{ request.query_string.decode() }}"
+        class="btn btn-success"
+        style="background:#16a34a;color:white;">
+            Excel
+        </a>
+
     </div>
 </div>
 

@@ -94,6 +94,14 @@
             Veja quanto foi pago em boletos, juros e valor total por empresa e período.
         </p>
     </div>
+
+    <div class="relatorio-toolbar">
+        <a href="{{ url_for('relatorios.relatorio_boletos_pagos_excel', farmacia_id=filtro_farmacia_id, data_inicio=data_inicio, data_fim=data_fim) }}"
+           class="btn btn-success"
+           style="background:#16a34a;color:white;">
+            Excel
+        </a>
+    </div>
 </div>
 
 <div class="form-card">
