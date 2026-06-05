@@ -15,21 +15,21 @@
 
 .page-header-premium h1 {
     margin: 0;
-    font-size: 28px;
+    font-size: 34px;
     color: #0f172a;
 }
 
 .page-header-premium p {
     margin: 6px 0 0 0;
     color: #64748b;
-    font-size: 14px;
+    font-size: 17px;
 }
 
 .premium-card {
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 20px;
-    padding: 18px;
+    padding: 20px;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
     margin-bottom: 18px;
 }
@@ -47,16 +47,16 @@
     background: #0f172a;
     color: #ffffff;
     text-align: left;
-    padding: 14px 12px;
-    font-size: 12px;
-    font-weight: 800;
+    padding: 16px 14px;
+    font-size: 15px;
+    font-weight: 900;
     white-space: nowrap;
 }
 
 .premium-table tbody td {
-    padding: 12px;
+    padding: 15px 14px;
     border-bottom: 1px solid #eef2f7;
-    font-size: 13px;
+    font-size: 16px;
     color: #334155;
     vertical-align: top;
 }
@@ -68,27 +68,27 @@
 .empresa-bloco {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
 }
 
 .empresa-bloco strong {
     color: #0f172a;
-    font-size: 14px;
+    font-size: 17px;
 }
 
 .empresa-bloco small {
     color: #64748b;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .badge-soft {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
+    padding: 7px 12px;
     border-radius: 999px;
-    font-size: 11px;
-    font-weight: 800;
+    font-size: 13px;
+    font-weight: 900;
     width: fit-content;
 }
 
@@ -115,29 +115,40 @@
 .actions-column-premium {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    min-width: 190px;
+    gap: 9px;
+    min-width: 210px;
 }
 
 .pay-form-premium {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
     background: #f8fafc;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
-    padding: 10px;
+    padding: 12px;
 }
 
 .money-strong {
-    font-weight: 800;
+    font-weight: 900;
     color: #0f172a;
 }
 
 .filters-inline-premium {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
+}
+
+.form-group label {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.form-group input,
+.form-group select {
+    font-size: 16px;
+    padding: 12px;
 }
 
 .form-actions-inline {
@@ -169,6 +180,7 @@
 
 <div class="premium-card">
     <form method="GET" class="filters-inline-premium">
+
         <div class="form-group">
             <label>Farmácia</label>
             <select name="farmacia_id">
@@ -191,8 +203,33 @@
             </select>
         </div>
 
+        <div class="form-group">
+            <label>Buscar Empresa / Fornecedor</label>
+            <input type="text" name="empresa" value="{{ filtro_empresa or '' }}" placeholder="Ex: distribuidora, aluguel, fornecedor">
+        </div>
+
+        <div class="form-group">
+            <label>Vencimento Inicial</label>
+            <input type="date" name="vencimento_inicio" value="{{ vencimento_inicio }}">
+        </div>
+
+        <div class="form-group">
+            <label>Vencimento Final</label>
+            <input type="date" name="vencimento_fim" value="{{ vencimento_fim }}">
+        </div>
+
+        <div class="form-group">
+            <label>Pagamento Inicial</label>
+            <input type="date" name="pagamento_inicio" value="{{ pagamento_inicio }}">
+        </div>
+
+        <div class="form-group">
+            <label>Pagamento Final</label>
+            <input type="date" name="pagamento_fim" value="{{ pagamento_fim }}">
+        </div>
+
         <div class="form-actions-inline">
-            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <button type="submit" class="btn btn-primary">Filtrar Boletos</button>
             <a href="{{ url_for('boletos.listar_boletos') }}" class="btn btn-secondary">Limpar</a>
         </div>
     </form>

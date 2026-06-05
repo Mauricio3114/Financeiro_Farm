@@ -40,6 +40,16 @@ def gerar_nome_parcela(nome_base, numero, total):
     return f"{nome_base} ({numero}/{total})"
 
 
+def parse_date(value):
+    try:
+        if value:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+    return None
+
+
 @boletos_bp.route("/")
 @login_required
 def listar_boletos():
@@ -48,6 +58,12 @@ def listar_boletos():
 
     filtro_farmacia_id = request.args.get("farmacia_id", type=int)
     filtro_status = request.args.get("status", "").strip()
+    filtro_empresa = request.args.get("empresa", "").strip()
+
+    vencimento_inicio = parse_date(request.args.get("vencimento_inicio"))
+    vencimento_fim = parse_date(request.args.get("vencimento_fim"))
+    pagamento_inicio = parse_date(request.args.get("pagamento_inicio"))
+    pagamento_fim = parse_date(request.args.get("pagamento_fim"))
 
     boletos = []
 
@@ -56,6 +72,21 @@ def listar_boletos():
 
         if filtro_farmacia_id:
             query = query.filter(Boleto.farmacia_id == filtro_farmacia_id)
+
+        if filtro_empresa:
+            query = query.filter(Boleto.empresa_nome.ilike(f"%{filtro_empresa}%"))
+
+        if vencimento_inicio:
+            query = query.filter(Boleto.data_vencimento >= vencimento_inicio)
+
+        if vencimento_fim:
+            query = query.filter(Boleto.data_vencimento <= vencimento_fim)
+
+        if pagamento_inicio:
+            query = query.filter(Boleto.data_pagamento >= pagamento_inicio)
+
+        if pagamento_fim:
+            query = query.filter(Boleto.data_pagamento <= pagamento_fim)
 
         boletos = query.order_by(Boleto.data_vencimento.asc()).all()
 
@@ -73,6 +104,11 @@ def listar_boletos():
         farmacias=farmacias,
         filtro_farmacia_id=filtro_farmacia_id,
         filtro_status=filtro_status,
+        filtro_empresa=filtro_empresa,
+        vencimento_inicio=request.args.get("vencimento_inicio", ""),
+        vencimento_fim=request.args.get("vencimento_fim", ""),
+        pagamento_inicio=request.args.get("pagamento_inicio", ""),
+        pagamento_fim=request.args.get("pagamento_fim", ""),
         hoje=date.today()
     )
 
