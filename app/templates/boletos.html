@@ -116,17 +116,7 @@
     display: flex;
     flex-direction: column;
     gap: 9px;
-    min-width: 210px;
-}
-
-.pay-form-premium {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 12px;
+    min-width: 160px;
 }
 
 .money-strong {
@@ -160,6 +150,90 @@
 
 .tag-parcela {
     margin-top: 4px;
+}
+
+.modal-baixa-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.58);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-baixa-bg.active {
+    display: flex;
+}
+
+.modal-baixa {
+    width: 100%;
+    max-width: 520px;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.modal-baixa-header {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #ffffff;
+    padding: 22px;
+}
+
+.modal-baixa-header h2 {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 900;
+}
+
+.modal-baixa-header p {
+    margin: 8px 0 0;
+    color: #cbd5e1;
+    font-size: 15px;
+}
+
+.modal-baixa-body {
+    padding: 22px;
+}
+
+.modal-info {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 16px;
+    display: grid;
+    gap: 6px;
+}
+
+.modal-info strong {
+    color: #0f172a;
+    font-size: 16px;
+}
+
+.modal-info span {
+    color: #475569;
+    font-size: 14px;
+}
+
+.modal-baixa-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.btn-baixa {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+}
+
+.btn-baixa:hover {
+    transform: translateY(-1px);
 }
 
 @media (max-width: 900px) {
@@ -307,11 +381,19 @@
                             <a href="{{ url_for('boletos.editar_boleto', boleto_id=boleto.id) }}" class="btn btn-small btn-secondary">Editar</a>
 
                             {% if boleto.status != 'pago' %}
-                            <form method="POST" action="{{ url_for('boletos.pagar_boleto', boleto_id=boleto.id) }}" class="pay-form-premium">
-                                <input type="date" name="data_pagamento" required>
-                                <input type="text" name="valor_pago" placeholder="Valor pago">
-                                <button type="submit" class="btn btn-small btn-success">Pagar</button>
-                            </form>
+                            <button
+                                type="button"
+                                class="btn btn-small btn-baixa"
+                                onclick="abrirModalBaixa(
+                                    '{{ boleto.id }}',
+                                    '{{ boleto.empresa_nome|e }}',
+                                    '{{ boleto.farmacia.nome_fantasia|e }}',
+                                    '{{ boleto.data_vencimento.strftime('%d/%m/%Y') }}',
+                                    '{{ '%.2f'|format(boleto.valor_total or boleto.valor_original) }}'
+                                )"
+                            >
+                                Dar Baixa
+                            </button>
                             {% endif %}
 
                             <form method="POST" action="{{ url_for('boletos.excluir_boleto', boleto_id=boleto.id) }}" onsubmit="return confirm('Deseja excluir este boleto?');">
@@ -329,4 +411,66 @@
         </table>
     </div>
 </div>
+
+<div class="modal-baixa-bg" id="modalBaixaBg">
+    <div class="modal-baixa">
+        <div class="modal-baixa-header">
+            <h2>Dar Baixa no Boleto</h2>
+            <p>Informe a data e o valor pago para confirmar a baixa.</p>
+        </div>
+
+        <div class="modal-baixa-body">
+            <div class="modal-info">
+                <strong id="modalEmpresa">-</strong>
+                <span id="modalFarmacia">-</span>
+                <span id="modalVencimento">-</span>
+                <span id="modalValor">-</span>
+            </div>
+
+            <form method="POST" id="formBaixa">
+                <div class="form-group">
+                    <label>Data do Pagamento</label>
+                    <input type="date" name="data_pagamento" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Valor Pago</label>
+                    <input type="text" name="valor_pago" id="modalValorPago" placeholder="Ex: 1500,00">
+                </div>
+
+                <div class="modal-baixa-actions">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalBaixa()">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Baixa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalBaixa(id, empresa, farmacia, vencimento, valor) {
+    const modal = document.getElementById("modalBaixaBg");
+    const form = document.getElementById("formBaixa");
+
+    document.getElementById("modalEmpresa").innerText = empresa;
+    document.getElementById("modalFarmacia").innerText = "Farmácia: " + farmacia;
+    document.getElementById("modalVencimento").innerText = "Vencimento: " + vencimento;
+    document.getElementById("modalValor").innerText = "Valor esperado: R$ " + valor;
+    document.getElementById("modalValorPago").value = valor.replace(".", ",");
+
+    form.action = "/boletos/pagar/" + id;
+
+    modal.classList.add("active");
+}
+
+function fecharModalBaixa() {
+    document.getElementById("modalBaixaBg").classList.remove("active");
+}
+
+document.getElementById("modalBaixaBg").addEventListener("click", function(event) {
+    if (event.target === this) {
+        fecharModalBaixa();
+    }
+});
+</script>
 {% endblock %}
