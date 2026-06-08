@@ -1194,11 +1194,12 @@ def relatorio_boletos_pagar_pdf():
                     continue
                 boletos_pagos.append(b)
         else:
-            if data_fim:
-                if b.data_vencimento <= data_fim:
-                    boletos_abertos.append(b)
-            else:
-                boletos_abertos.append(b)
+            if data_inicio and b.data_vencimento < data_inicio:
+                continue
+            if data_fim and b.data_vencimento > data_fim:
+                continue
+
+            boletos_abertos.append(b)
 
     if status_filtro == "pago":
         boletos_abertos = []
@@ -1293,11 +1294,12 @@ def relatorio_boletos_pagar():
                     continue
                 boletos_pagos.append(b)
         else:
-            if data_fim:
-                if b.data_vencimento <= data_fim:
-                    boletos_abertos.append(b)
-            else:
-                boletos_abertos.append(b)
+            if data_inicio and b.data_vencimento < data_inicio:
+                continue
+            if data_fim and b.data_vencimento > data_fim:
+                continue
+
+            boletos_abertos.append(b)
 
     if status_filtro == "pago":
         boletos_abertos = []
@@ -1596,11 +1598,12 @@ def relatorio_boletos_pagar_excel():
                     continue
                 boletos_pagos.append(b)
         else:
-            if data_fim:
-                if b.data_vencimento <= data_fim:
-                    boletos_abertos.append(b)
-            else:
-                boletos_abertos.append(b)
+            if data_inicio and b.data_vencimento < data_inicio:
+                continue
+            if data_fim and b.data_vencimento > data_fim:
+                continue
+
+            boletos_abertos.append(b)
 
     if status_filtro == "pago":
         boletos_abertos = []
