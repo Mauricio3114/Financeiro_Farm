@@ -46,13 +46,25 @@ def parse_date(value):
 
 def get_filtro_ids():
     farmacias = farmacias_do_usuario(current_user)
-    farmacia_ids = [f.id for f in farmacias]
+    farmacia_ids_permitidas = [f.id for f in farmacias]
+
+    farmacia_ids_marcadas = request.args.getlist("farmacia_ids")
     filtro_farmacia_id = request.args.get("farmacia_id", type=int)
 
-    if filtro_farmacia_id and filtro_farmacia_id in farmacia_ids:
-        farmacia_ids = [filtro_farmacia_id]
+    if farmacia_ids_marcadas:
+        ids = [
+            int(fid)
+            for fid in farmacia_ids_marcadas
+            if fid.isdigit() and int(fid) in farmacia_ids_permitidas
+        ]
 
-    return farmacia_ids
+        if ids:
+            return ids
+
+    if filtro_farmacia_id and filtro_farmacia_id in farmacia_ids_permitidas:
+        return [filtro_farmacia_id]
+
+    return farmacia_ids_permitidas
 
 
 def get_farmacias_e_filtro():
